@@ -66,7 +66,7 @@ export default function Dashboard() {
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
           <div className="absolute inset-0 right-0 top-1/2 -translate-y-1/2 overflow-hidden pointer-events-none z-0">
-            <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10rem] sm:text-[14rem] font-bold text-primary/[0.04] select-none chinese-char whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.06] transition-all duration-700" aria-hidden="true">记忆</span>
+            <span className="absolute -right-4 lg:-right-8 top-1/2 -translate-y-1/2 text-[14rem] sm:text-[18rem] text-primary/[0.08] select-none material-symbols-outlined whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.12] transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">monitoring</span>
           </div>
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">
@@ -108,7 +108,7 @@ export default function Dashboard() {
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
           <div className="absolute inset-0 right-0 top-1/2 -translate-y-1/2 overflow-hidden pointer-events-none z-0">
-            <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10rem] sm:text-[14rem] font-bold text-primary/[0.04] select-none chinese-char whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.06] transition-all duration-700" aria-hidden="true">词汇</span>
+            <span className="absolute -right-4 lg:-right-8 top-1/2 -translate-y-1/2 text-[14rem] sm:text-[18rem] text-primary/[0.08] select-none material-symbols-outlined whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.12] transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">library_books</span>
           </div>
 
           <div className="relative z-10 flex justify-between items-center mb-6">

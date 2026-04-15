@@ -65,7 +65,9 @@ export default function Dashboard() {
         {/* Study Progress */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <span className="absolute -bottom-8 -right-8 text-[14rem] sm:text-[20rem] text-primary opacity-10 select-none material-symbols-outlined pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">trending_up</span>
+          <svg className="absolute -bottom-8 -right-8 w-[14rem] sm:w-[20rem] h-[14rem] sm:h-[20rem] text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">
             <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Study Progress</h3>
@@ -105,7 +107,9 @@ export default function Dashboard() {
         {/* Recent Word Lists */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <span className="absolute -bottom-8 -right-8 text-[14rem] sm:text-[20rem] text-primary opacity-10 select-none material-symbols-outlined pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">library_books</span>
+          <svg className="absolute -bottom-8 -right-8 w-[14rem] sm:w-[20rem] h-[14rem] sm:h-[20rem] text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
 
           <div className="relative z-10 flex justify-between items-center mb-6">
             <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Recent Word Lists</h3>

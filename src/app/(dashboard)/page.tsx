@@ -66,7 +66,7 @@ export default function Dashboard() {
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
           <svg className="absolute -bottom-8 -right-8 w-[14rem] sm:w-[20rem] h-[14rem] sm:h-[20rem] text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6 M18 9h1.5a2.5 2.5 0 0 0 0-5H18 M4 22h16 M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22 M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22 M18 2H6v7c0 6 3 10 6 10s6-4 6-10V2z" />
           </svg>
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">

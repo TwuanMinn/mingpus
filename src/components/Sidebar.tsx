@@ -7,6 +7,8 @@ const navItems = [
   { href: "/", icon: "dashboard", label: "Dashboard" },
   { href: "/practice", icon: "auto_stories", label: "Practice" },
   { href: "/flashcards", icon: "style", label: "Flashcards" },
+  { href: "/discover", icon: "explore", label: "Discover" },
+  { href: "/dictionary", icon: "translate", label: "Dictionary" },
   { href: "/quiz", icon: "quiz", label: "Quiz" },
   { href: "/import", icon: "library_add", label: "Import" },
   { href: "/strokes", icon: "draw", label: "Strokes" },
@@ -22,20 +24,20 @@ export function Sidebar() {
         <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Level 4 • HSK 5</p>
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors duration-200 text-[13px] ${
                 isActive
                   ? "text-[#4648d4] font-bold bg-[#e1e0ff]"
                   : "text-slate-500 hover:text-[#4648d4] hover:bg-[#f5f2fe]"
               }`}
             >
-              <span className="material-symbols-outlined">{item.icon}</span>
+              <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
               <span>{item.label}</span>
             </Link>
           );

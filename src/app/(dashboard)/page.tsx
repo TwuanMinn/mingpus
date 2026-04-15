@@ -60,6 +60,112 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* NEW: Progress & Lists (from user request) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        {/* Study Progress */}
+        <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col">
+          <div className="flex justify-between items-center mb-6 sm:mb-8">
+            <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Study Progress</h3>
+            <Link href="#" className="font-bold text-sm text-primary flex items-center hover:underline">
+              Weekly Review <span className="material-symbols-outlined text-[16px] ml-1">north_east</span>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Words Learned */}
+            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10">
+              <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Words Learned</p>
+              <p className="text-3xl font-black text-on-surface mb-3">1,248</p>
+              <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full w-[75%]"></div>
+              </div>
+            </div>
+            {/* Daily Streak */}
+            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10">
+              <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Daily Streak</p>
+              <p className="text-3xl font-black text-on-surface mb-3">42</p>
+              <p className="text-xs font-bold text-primary flex items-center mt-2">
+                <span className="material-symbols-outlined text-[14px] mr-1" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+                Top 5% this month
+              </p>
+            </div>
+            {/* Accuracy */}
+            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10">
+              <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Accuracy</p>
+              <p className="text-3xl font-black text-on-surface mb-3">94%</p>
+              <p className="text-xs font-medium text-on-surface-variant mt-2">
+                +2% from last week
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Word Lists */}
+        <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Recent Word Lists</h3>
+            <Link href="/decks" className="font-bold text-sm text-primary hover:underline">
+              View All
+            </Link>
+          </div>
+          <div className="space-y-3 sm:space-y-4">
+            {/* List 1 */}
+            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary-fixed text-primary rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined">restaurant</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-on-surface">Dining & Food</h4>
+                  <p className="text-xs text-on-surface-variant mt-0.5">24 words • 85% mastered</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:block w-24 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full w-[85%]"></div>
+                </div>
+                <span className="material-symbols-outlined text-outline">chevron_right</span>
+              </div>
+            </div>
+            {/* List 2 */}
+            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-secondary-fixed text-secondary rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined">flight</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-on-surface">Travel & Transport</h4>
+                  <p className="text-xs text-on-surface-variant mt-0.5">18 words • 40% mastered</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:block w-24 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full w-[40%]"></div>
+                </div>
+                <span className="material-symbols-outlined text-outline">chevron_right</span>
+              </div>
+            </div>
+            {/* List 3 */}
+            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-tertiary-fixed text-tertiary rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined">work</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-on-surface">Business Chinese</h4>
+                  <p className="text-xs text-on-surface-variant mt-0.5">32 words • New</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:block w-24 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                  <div className="h-full bg-surface-container-high rounded-full w-[0%]"></div>
+                </div>
+                <span className="material-symbols-outlined text-outline">chevron_right</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
         {/* Main Study Card */}

@@ -1,20 +1,22 @@
-import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
-import { db } from '@/db';
-import { users, flashcards, decks } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { t } from '../trpc';
+import { dashboardRouter } from './dashboard';
+import { deckRouter } from './deck';
+import { flashcardRouter } from './flashcard';
+import { practiceRouter } from './practice';
+import { dictionaryRouter } from './dictionary';
+import { quizRouter } from './quiz';
+import { importRouter } from './import';
 
-export const appRouter = router({
-  hello: publicProcedure
-    .input(z.object({ text: z.string() }))
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input.text}`,
-      };
-    }),
-  getDecks: publicProcedure.query(async () => {
-    return await db.select().from(decks);
-  }),
-});
+// mergeRouters keeps a flat namespace so all existing client calls
+// (e.g. trpc.getDecks, trpc.submitReview) continue to work unchanged.
+export const appRouter = t.mergeRouters(
+  dashboardRouter,
+  deckRouter,
+  flashcardRouter,
+  practiceRouter,
+  dictionaryRouter,
+  quizRouter,
+  importRouter,
+);
 
 export type AppRouter = typeof appRouter;

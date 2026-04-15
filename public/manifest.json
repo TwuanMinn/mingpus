@@ -1,0 +1,16 @@
+{
+  "name": "Digital Calligrapher",
+  "short_name": "Calligrapher",
+  "description": "Learn Chinese Characters with Interactive Flashcards, Quizzes, and Stroke Practice",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fcf8ff",
+  "theme_color": "#4648d4",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

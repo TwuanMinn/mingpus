@@ -15,14 +15,14 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#fcf8ff]/80 backdrop-blur-xl shadow-[0_-4px_24px_rgba(70,72,212,0.06)] border-t border-outline-variant/10 flex justify-around items-center px-2 pb-5 pt-2 z-50 rounded-t-2xl">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl shadow-[0_-4px_24px_rgba(70,72,212,0.06)] border-t border-outline-variant/10 flex justify-around items-center px-2 pb-5 pt-2 z-50 rounded-t-2xl">
       {mobileItems.map((item) => {
         const isActive = pathname === item.href;
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center gap-0.5 min-w-[48px] py-1 ${isActive ? "text-[#4648d4]" : "text-slate-400"}`}
+            className={`flex flex-col items-center gap-0.5 min-w-[48px] py-1 ${isActive ? "text-primary" : "text-outline"}`}
           >
             <span
               className="material-symbols-outlined text-[22px]"

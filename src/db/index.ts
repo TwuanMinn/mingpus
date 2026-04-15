@@ -1,9 +1,12 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
 import * as schema from './schema';
+import path from 'path';
 
-const connectionString = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/postgres";
+const dbPath = path.join(process.cwd(), 'local.db');
+const sqlite = new Database(dbPath);
 
-// Disable prefetch as it is not supported for "Transaction" pool mode
-export const client = postgres(connectionString, { prepare: false });
-export const db = drizzle(client, { schema });
+// Enable WAL mode for better concurrency
+sqlite.pragma('journal_mode = WAL');
+
+export const db = drizzle(sqlite, { schema });

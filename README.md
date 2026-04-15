@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Digital Calligrapher 书法
+
+A premium **Chinese language learning** platform built with Next.js 16, featuring spaced repetition (SM-2), interactive flashcards, stroke practice, quizzes, and a built-in dictionary — all powered by a local SQLite database.
+
+## Tech Stack
+
+| Layer         | Technology                                      |
+| ------------- | ----------------------------------------------- |
+| **Framework** | Next.js 16 (App Router) · React 19              |
+| **API**       | tRPC 11 (type-safe RPC)                         |
+| **Database**  | SQLite (better-sqlite3) · Drizzle ORM           |
+| **Auth**      | better-auth (email/password)                    |
+| **State**     | Zustand · TanStack React Query                  |
+| **Styling**   | Tailwind CSS 4 · Framer Motion                  |
+| **Testing**   | Vitest (unit) · Playwright (E2E)                |
+
+## Features
+
+- **Dashboard** — overview of decks, cards due, daily progress
+- **Practice** — spaced repetition reviews using the SM-2 algorithm
+- **Flashcards** — 3D flip-card study with Framer Motion animations
+- **Decks** — CRUD management for card collections
+- **Dictionary** — search by character, pinyin, or English meaning
+- **Quiz** — multiple-choice knowledge tests with auto-distractors
+- **Strokes** — handwriting/radical order practice canvas
+- **Import** — bulk card import into existing decks
+- **Discover** — explore new characters by HSK level
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js ≥ 18
+- npm ≥ 9
+
+### Setup
 
 ```bash
+# Install dependencies
+npm install
+
+# Create and seed the local database
+node setup-db.js
+node seed-data.js
+
+# Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to access the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a `.env` file in the project root:
 
-## Learn More
+```env
+BETTER_AUTH_SECRET=<your-secret>
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Script              | Description                       |
+| ------------------- | --------------------------------- |
+| `npm run dev`       | Start Next.js dev server          |
+| `npm run build`     | Production build                  |
+| `npm run test`      | Run Vitest unit tests             |
+| `npm run test:e2e`  | Run Playwright E2E tests          |
+| `npm run lint`      | ESLint check                      |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+src/
+├── app/                   # Next.js App Router pages
+│   ├── (dashboard)/       # Protected dashboard routes
+│   │   ├── page.tsx       # Dashboard home
+│   │   ├── practice/      # SM-2 practice session
+│   │   ├── flashcards/    # Card study view
+│   │   ├── decks/         # Deck management
+│   │   ├── dictionary/    # Character search
+│   │   ├── quiz/          # Quiz mode
+│   │   ├── strokes/       # Stroke practice
+│   │   ├── import/        # Bulk import
+│   │   └── discover/      # Character discovery
+│   └── login/             # Auth page
+├── components/            # Shared UI components
+├── db/                    # Drizzle schema & connection
+├── lib/                   # Utilities (SM-2 algo, auth config)
+├── server/                # tRPC server
+│   ├── trpc.ts            # tRPC init & middleware
+│   └── routers/           # Domain-split routers
+│       ├── _app.ts        # Root merge
+│       ├── dashboard.ts
+│       ├── deck.ts
+│       ├── flashcard.ts
+│       ├── practice.ts
+│       ├── dictionary.ts
+│       ├── quiz.ts
+│       └── import.ts
+├── store/                 # Zustand stores
+└── trpc/                  # tRPC React client
+tests/
+├── unit/                  # Vitest unit tests
+└── e2e/                   # Playwright E2E tests
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private project.

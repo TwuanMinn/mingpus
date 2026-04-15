@@ -6,7 +6,15 @@ import React, { useState } from 'react';
 import { trpc } from '@/trpc/client';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30 * 1000,   // 30s — prevents redundant refetch on page nav
+        gcTime: 5 * 60 * 1000,  // 5m — keep cache longer
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [

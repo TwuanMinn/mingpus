@@ -60,25 +60,74 @@
   --color-surface-tint: #494bd6;
 }
 
+/* Dark Mode Overrides */
+.dark {
+  --color-background: #131318;
+  --color-on-background: #e4e1ed;
+  --color-surface: #131318;
+  --color-on-surface: #e4e1ed;
+  --color-on-surface-variant: #c7c4d7;
+  --color-surface-container-lowest: #0e0e13;
+  --color-surface-container-low: #1b1b23;
+  --color-surface-container: #1f1f28;
+  --color-surface-container-high: #2a2a33;
+  --color-surface-container-highest: #35343e;
+  --color-surface-bright: #39383f;
+  --color-surface-dim: #131318;
+  --color-surface-variant: #464554;
+
+  --color-primary: #c0c1ff;
+  --color-on-primary: #1a17a8;
+  --color-primary-container: #6063ee;
+  --color-on-primary-container: #fffbff;
+  --color-primary-fixed: #e1e0ff;
+  --color-primary-fixed-dim: #c0c1ff;
+  --color-inverse-primary: #4648d4;
+
+  --color-secondary: #ddb7ff;
+  --color-on-secondary: #4a0080;
+  --color-secondary-container: #9c48ea;
+  --color-secondary-fixed: #f0dbff;
+  --color-secondary-fixed-dim: #ddb7ff;
+
+  --color-tertiary: #c3c0ff;
+  --color-on-tertiary: #1c10b3;
+  --color-tertiary-container: #645efb;
+  --color-tertiary-fixed: #e2dfff;
+  --color-tertiary-fixed-dim: #c3c0ff;
+
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+
+  --color-outline: #918fa0;
+  --color-outline-variant: #464554;
+  --color-inverse-surface: #e4e1ed;
+  --color-inverse-on-surface: #303038;
+  --color-surface-tint: #c0c1ff;
+}
+
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
 }
 
 .chinese-char {
-  font-family: 'Noto Sans SC', sans-serif;
+  font-family: var(--font-noto-sc), 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', sans-serif;
   letter-spacing: 0.05em;
 }
 
-.glass-effect {
-  background: rgba(252, 248, 255, 0.7);
-  backdrop-filter: blur(20px);
-}
-
+.glass-effect,
 .glass-panel {
   background: rgba(252, 248, 255, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+.dark .glass-effect,
+.dark .glass-panel {
+  background: rgba(19, 19, 24, 0.7);
 }
 
 .perspective-1000 {
@@ -128,4 +177,4 @@
     @apply bg-background text-on-surface antialiased;
     font-family: 'Inter', sans-serif;
   }
-}
+}

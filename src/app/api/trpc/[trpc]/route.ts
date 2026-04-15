@@ -7,6 +7,11 @@ const handler = (req: Request) =>
     req,
     router: appRouter,
     createContext: () => ({}),
+    onError: ({ error, path }) => {
+      if (error.code !== 'UNAUTHORIZED') {
+        console.error(`tRPC Error on ${path}:`, error.message);
+      }
+    },
   });
 
 export { handler as GET, handler as POST };

@@ -65,9 +65,7 @@ export default function Dashboard() {
         {/* Study Progress */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden pointer-events-none z-0 flex items-center justify-end pr-4 sm:pr-8">
-            <span className="text-[12rem] sm:text-[16rem] text-primary opacity-10 select-none material-symbols-outlined group-hover:scale-105 group-hover:opacity-20 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">monitoring</span>
-          </div>
+          <span className="absolute -bottom-8 -right-8 text-[14rem] sm:text-[20rem] text-primary opacity-10 select-none material-symbols-outlined pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">trending_up</span>
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">
             <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Study Progress</h3>
@@ -107,9 +105,7 @@ export default function Dashboard() {
         {/* Recent Word Lists */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden pointer-events-none z-0 flex items-center justify-end pr-4 sm:pr-8">
-            <span className="text-[12rem] sm:text-[16rem] text-primary opacity-10 select-none material-symbols-outlined group-hover:scale-105 group-hover:opacity-20 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">library_books</span>
-          </div>
+          <span className="absolute -bottom-8 -right-8 text-[14rem] sm:text-[20rem] text-primary opacity-10 select-none material-symbols-outlined pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">library_books</span>
 
           <div className="relative z-10 flex justify-between items-center mb-6">
             <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Recent Word Lists</h3>

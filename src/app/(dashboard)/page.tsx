@@ -65,8 +65,8 @@ export default function Dashboard() {
         {/* Study Progress */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <div className="absolute inset-0 right-0 top-1/2 -translate-y-1/2 overflow-hidden pointer-events-none z-0">
-            <span className="absolute -right-4 lg:-right-8 top-1/2 -translate-y-1/2 text-[14rem] sm:text-[18rem] text-primary/[0.08] select-none material-symbols-outlined whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.12] transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">monitoring</span>
+          <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden pointer-events-none z-0 flex items-center justify-end pr-4 sm:pr-8">
+            <span className="text-[12rem] sm:text-[16rem] text-primary opacity-10 select-none material-symbols-outlined group-hover:scale-105 group-hover:opacity-20 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">monitoring</span>
           </div>
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">
@@ -107,8 +107,8 @@ export default function Dashboard() {
         {/* Recent Word Lists */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <div className="absolute inset-0 right-0 top-1/2 -translate-y-1/2 overflow-hidden pointer-events-none z-0">
-            <span className="absolute -right-4 lg:-right-8 top-1/2 -translate-y-1/2 text-[14rem] sm:text-[18rem] text-primary/[0.08] select-none material-symbols-outlined whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.12] transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">library_books</span>
+          <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden pointer-events-none z-0 flex items-center justify-end pr-4 sm:pr-8">
+            <span className="text-[12rem] sm:text-[16rem] text-primary opacity-10 select-none material-symbols-outlined group-hover:scale-105 group-hover:opacity-20 transition-all duration-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">library_books</span>
           </div>
 
           <div className="relative z-10 flex justify-between items-center mb-6">

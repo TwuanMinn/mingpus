@@ -63,16 +63,21 @@ export default function Dashboard() {
       {/* NEW: Progress & Lists (from user request) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-8">
         {/* Study Progress */}
-        <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col">
-          <div className="flex justify-between items-center mb-6 sm:mb-8">
+        <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
+          {/* Watermark */}
+          <div className="absolute inset-0 right-0 top-1/2 -translate-y-1/2 overflow-hidden pointer-events-none z-0">
+            <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10rem] sm:text-[14rem] font-bold text-primary/[0.04] select-none chinese-char whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.06] transition-all duration-700" aria-hidden="true">记忆</span>
+          </div>
+          
+          <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">
             <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Study Progress</h3>
             <Link href="#" className="font-bold text-sm text-primary flex items-center hover:underline">
               Weekly Review <span className="material-symbols-outlined text-[16px] ml-1">north_east</span>
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Words Learned */}
-            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10">
+            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10 transition-transform hover:-translate-y-1 hover:shadow-md">
               <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Words Learned</p>
               <p className="text-3xl font-black text-on-surface mb-3">1,248</p>
               <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
@@ -80,7 +85,7 @@ export default function Dashboard() {
               </div>
             </div>
             {/* Daily Streak */}
-            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10">
+            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10 transition-transform hover:-translate-y-1 hover:shadow-md">
               <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Daily Streak</p>
               <p className="text-3xl font-black text-on-surface mb-3">42</p>
               <p className="text-xs font-bold text-primary flex items-center mt-2">
@@ -89,7 +94,7 @@ export default function Dashboard() {
               </p>
             </div>
             {/* Accuracy */}
-            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10">
+            <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10 transition-transform hover:-translate-y-1 hover:shadow-md">
               <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Accuracy</p>
               <p className="text-3xl font-black text-on-surface mb-3">94%</p>
               <p className="text-xs font-medium text-on-surface-variant mt-2">
@@ -100,16 +105,21 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Word Lists */}
-        <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col">
-          <div className="flex justify-between items-center mb-6">
+        <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
+          {/* Watermark */}
+          <div className="absolute inset-0 right-0 top-1/2 -translate-y-1/2 overflow-hidden pointer-events-none z-0">
+            <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10rem] sm:text-[14rem] font-bold text-primary/[0.04] select-none chinese-char whitespace-nowrap group-hover:scale-105 group-hover:text-primary/[0.06] transition-all duration-700" aria-hidden="true">词汇</span>
+          </div>
+
+          <div className="relative z-10 flex justify-between items-center mb-6">
             <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Recent Word Lists</h3>
             <Link href="/decks" className="font-bold text-sm text-primary hover:underline">
               View All
             </Link>
           </div>
-          <div className="space-y-3 sm:space-y-4">
+          <div className="relative z-10 space-y-3 sm:space-y-4">
             {/* List 1 */}
-            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors">
+            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-primary-fixed text-primary rounded-xl flex items-center justify-center">
                   <span className="material-symbols-outlined">restaurant</span>
@@ -127,7 +137,7 @@ export default function Dashboard() {
               </div>
             </div>
             {/* List 2 */}
-            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors">
+            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-secondary-fixed text-secondary rounded-xl flex items-center justify-center">
                   <span className="material-symbols-outlined">flight</span>
@@ -145,7 +155,7 @@ export default function Dashboard() {
               </div>
             </div>
             {/* List 3 */}
-            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors">
+            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-tertiary-fixed text-tertiary rounded-xl flex items-center justify-center">
                   <span className="material-symbols-outlined">work</span>

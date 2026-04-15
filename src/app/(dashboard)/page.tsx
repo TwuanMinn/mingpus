@@ -66,7 +66,7 @@ export default function Dashboard() {
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
           <svg className="absolute -bottom-8 -right-8 w-[14rem] sm:w-[20rem] h-[14rem] sm:h-[20rem] text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6 M18 9h1.5a2.5 2.5 0 0 0 0-5H18 M4 22h16 M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22 M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22 M18 2H6v7c0 6 3 10 6 10s6-4 6-10V2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M4.26 10.147a60.436 60.436 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.905 59.905 0 0 1 12 3.493a59.902 59.902 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
           </svg>
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">

@@ -1,10 +1,25 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Component, type ReactNode } from 'react';
 import { trpc } from '@/trpc/client';
 import { usePracticeStore } from '@/store/usePracticeStore';
 import { SpeakButton } from '@/components/SpeakButton';
+import { SentenceContext } from '@/components/SentenceContext';
+import { RadicalBreakdown } from '@/components/RadicalBreakdown';
+import { CompoundWords } from '@/components/CompoundWords';
+import { CardReveal } from '@/components/Animations';
+import { AchievementToast, XPPopup } from '@/components/AchievementToast';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { calculateReviewXP } from '@/lib/gamification';
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 const QUALITY_ACTIONS = [
   { quality: 1, label: 'Again', icon: 'replay', key: '1', desc: '< 1 min', className: 'bg-error/10 text-error hover:bg-error/20 border border-error/20' },
@@ -18,6 +33,13 @@ export default function PracticePage() {
   const { data: dueCards, isLoading, refetch } = trpc.getDueCards.useQuery({ limit: 20 });
   const submitReview = trpc.submitReview.useMutation({ onSuccess: () => refetch() });
   const recordActivity = trpc.recordStudyActivity.useMutation();
+  const awardXP = trpc.awardXP.useMutation();
+  const updateChallenge = trpc.updateChallengeProgress.useMutation();
+
+  const [xpGained, setXpGained] = useState(0);
+  const [showXP, setShowXP] = useState(false);
+  const [newAchievements, setNewAchievements] = useState<string[]>([]);
+  const [reviewStartTime, setReviewStartTime] = useState(Date.now());
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -38,9 +60,15 @@ export default function PracticePage() {
     if (total > 0) setCardsRemaining(total - currentIndex);
   }, [total, currentIndex, setCardsRemaining]);
 
+  // Reset timer when card changes
+  useEffect(() => {
+    setReviewStartTime(Date.now());
+  }, [currentIndex]);
+
   const handleAction = useCallback((quality: number) => {
     if (!card) return;
-    submitReview.mutate({ progressId: card.progressId, quality });
+    const responseTimeMs = Date.now() - reviewStartTime;
+    submitReview.mutate({ progressId: card.progressId, quality, responseTimeMs });
     const isCorrect = quality >= 3;
     if (isCorrect) {
       recordMastered();
@@ -52,9 +80,25 @@ export default function PracticePage() {
     }
     // Record activity for streak persistence
     recordActivity.mutate({ cardsReviewed: 1, cardsCorrect: isCorrect ? 1 : 0 });
+
+    // Award XP and track challenges
+    const xp = calculateReviewXP(quality, streak, responseTimeMs);
+    setXpGained(xp);
+    setShowXP(true);
+    setTimeout(() => setShowXP(false), 1500);
+    awardXP.mutate({ xpAmount: xp, source: 'review' }, {
+      onSuccess: (result) => {
+        if (result.newAchievements.length > 0) {
+          setNewAchievements(prev => [...prev, ...result.newAchievements]);
+        }
+      },
+    });
+    updateChallenge.mutate({ challengeType: 'review_count', increment: 1 });
+    if (quality >= 5) updateChallenge.mutate({ challengeType: 'perfect_recall', increment: 1 });
+
     setRevealed(false);
     setCurrentIndex(i => i + 1);
-  }, [card, submitReview, recordMastered, recordReviewed, incrementStreak, incrementScore, resetStreak, recordActivity]);
+  }, [card, reviewStartTime, submitReview, recordMastered, recordReviewed, incrementStreak, incrementScore, resetStreak, recordActivity, awardXP, updateChallenge, streak]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -262,6 +306,28 @@ export default function PracticePage() {
           </div>
         </div>
       </div>
+
+      {/* Sentence Context + Radical Breakdown + Compound Words */}
+      {revealed && (
+        <CardReveal delay={0.1}>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <ErrorBoundary><SentenceContext character={card.character} /></ErrorBoundary>
+            <ErrorBoundary><RadicalBreakdown character={card.character} /></ErrorBoundary>
+            <ErrorBoundary><CompoundWords character={card.character} /></ErrorBoundary>
+          </div>
+        </CardReveal>
+      )}
+
+      {/* XP Popup */}
+      <XPPopup amount={xpGained} show={showXP} />
+
+      {/* Achievement Toast */}
+      {newAchievements.length > 0 && (
+        <AchievementToast
+          achievementKeys={newAchievements}
+          onDismiss={() => setNewAchievements([])}
+        />
+      )}
 
       {/* Keyboard shortcuts — desktop only */}
       <div className="hidden lg:flex fixed bottom-4 left-1/2 -translate-x-1/2 bg-surface-container-low/90 backdrop-blur-md rounded-full px-6 py-2 shadow-lg shadow-on-surface/5 items-center gap-4 text-[10px] text-on-surface-variant font-medium z-20 border border-outline-variant/20">

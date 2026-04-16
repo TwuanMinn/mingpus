@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from './ThemeToggle';
+import { NotificationCenter } from './NotificationCenter';
 
 interface UserInfo {
   name: string;
@@ -57,6 +58,7 @@ export function Header({ user }: { user: UserInfo }) {
           </button>
         </form>
         <div className="flex items-center gap-2 sm:gap-4 text-primary">
+          <NotificationCenter />
           <ThemeToggle />
           <button
             onClick={handleSignOut}

@@ -109,6 +109,21 @@
 }
 
 .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
 }
@@ -177,4 +192,15 @@
     @apply bg-background text-on-surface antialiased;
     font-family: 'Inter', sans-serif;
   }
+}
+
+/* Custom grid columns for Mastery Map */
+@media (min-width: 640px) {
+  .grid-cols-15 { grid-template-columns: repeat(15, minmax(0, 1fr)); }
+}
+@media (min-width: 768px) {
+  .grid-cols-20 { grid-template-columns: repeat(20, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .grid-cols-25 { grid-template-columns: repeat(25, minmax(0, 1fr)); }
 }

@@ -175,6 +175,101 @@ export const reviewLogs = sqliteTable("review_logs", {
   index("review_logs_flashcardId_idx").on(table.flashcardId),
 ]);
 
+// ─── Sentence Context ───
+
+export const characterSentences = sqliteTable("character_sentences", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  character: text("character").notNull(),
+  sentence: text("sentence").notNull(),
+  pinyin: text("pinyin").notNull(),
+  translation: text("translation").notNull(),
+  hskLevel: integer("hsk_level"),
+}, (table) => [
+  index("sentences_character_idx").on(table.character),
+]);
+
+// ─── Radical Breakdown ───
+
+export const characterRadicals = sqliteTable("character_radicals", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  character: text("character").notNull().unique(),
+  radicals: text("radicals").notNull(), // JSON: [{radical, meaning, position}]
+  decomposition: text("decomposition"), // e.g. "⿰女子"
+  etymology: text("etymology"),
+});
+
+// ─── Notifications ───
+
+export const notifications = sqliteTable("notifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(), // 'weekly_summary' | 'milestone' | 'streak' | 'reminder'
+  read: integer("read", { mode: "boolean" }).default(false).notNull(),
+  data: text("data"), // JSON for extra payload
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => [
+  index("notifications_userId_idx").on(table.userId),
+  index("notifications_read_idx").on(table.userId, table.read),
+]);
+
+// ─── Gamification: XP Tracking ───
+
+export const userXP = sqliteTable("user_xp", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }).notNull().unique(),
+  totalXP: integer("total_xp").default(0).notNull(),
+  level: integer("level").default(1).notNull(),
+  currentStreak: integer("current_streak").default(0).notNull(),
+  longestStreak: integer("longest_streak").default(0).notNull(),
+  lastStudyDate: text("last_study_date"), // YYYY-MM-DD
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => [
+  index("user_xp_userId_idx").on(table.userId),
+]);
+
+// ─── Gamification: Achievements ───
+
+export const userAchievements = sqliteTable("user_achievements", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }).notNull(),
+  achievementKey: text("achievement_key").notNull(), // e.g. 'first_review', 'streak_7', 'hsk1_complete'
+  unlockedAt: integer("unlocked_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => [
+  index("achievements_userId_idx").on(table.userId),
+  index("achievements_key_idx").on(table.userId, table.achievementKey),
+]);
+
+// ─── Gamification: Daily Challenges ───
+
+export const dailyChallenges = sqliteTable("daily_challenges", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }).notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  challengeType: text("challenge_type").notNull(), // 'review_count' | 'perfect_recall' | 'stroke_practice' | 'quiz_score'
+  targetValue: integer("target_value").notNull(),
+  currentValue: integer("current_value").default(0).notNull(),
+  completed: integer("completed", { mode: "boolean" }).default(false).notNull(),
+  xpReward: integer("xp_reward").default(50).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => [
+  index("challenges_userId_date_idx").on(table.userId, table.date),
+]);
+
+// ─── Content: Compound Words ───
+
+export const compoundWords = sqliteTable("compound_words", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  character: text("character").notNull(),
+  word: text("word").notNull(),
+  pinyin: text("pinyin").notNull(),
+  meaning: text("meaning").notNull(),
+  hskLevel: integer("hsk_level"),
+}, (table) => [
+  index("compound_words_char_idx").on(table.character),
+]);
+
 // ─── App Relations ───
 
 export const decksRelations = relations(decks, ({ one, many }) => ({
@@ -198,4 +293,16 @@ export const studySessionsRelations = relations(studySessions, ({ one }) => ({
 export const reviewLogsRelations = relations(reviewLogs, ({ one }) => ({
   user: one(user, { fields: [reviewLogs.userId], references: [user.id] }),
   flashcard: one(flashcards, { fields: [reviewLogs.flashcardId], references: [flashcards.id] }),
+}));
+
+export const userXPRelations = relations(userXP, ({ one }) => ({
+  user: one(user, { fields: [userXP.userId], references: [user.id] }),
+}));
+
+export const userAchievementsRelations = relations(userAchievements, ({ one }) => ({
+  user: one(user, { fields: [userAchievements.userId], references: [user.id] }),
+}));
+
+export const dailyChallengesRelations = relations(dailyChallenges, ({ one }) => ({
+  user: one(user, { fields: [dailyChallenges.userId], references: [user.id] }),
 }));

@@ -6,11 +6,16 @@
   "display": "standalone",
   "background_color": "#fcf8ff",
   "theme_color": "#4648d4",
+  "orientation": "any",
+  "scope": "/",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/favicon.ico",
       "sizes": "any",
       "type": "image/x-icon"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { XPBar } from './XPBar';
+import { LevelBadge } from './LevelBadge';
 
 interface UserInfo {
   name: string;
@@ -62,32 +64,28 @@ export function Sidebar({ user }: { user: UserInfo }) {
         })}
       </nav>
 
-      <div className="mt-auto p-4 bg-surface-container-low rounded-xl">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-primary-fixed overflow-hidden border-2 border-primary-fixed-dim flex-shrink-0 flex items-center justify-center">
-            {user.image ? (
-              <img
-                alt={user.name}
-                src={user.image}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-sm font-bold text-primary">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-on-surface truncate">{user.name}</p>
-            <p className="text-xs text-on-surface-variant truncate">{user.email}</p>
-          </div>
+      <div className="mt-auto space-y-3">
+        {/* XP Progress */}
+        <div className="px-4 py-3 bg-surface-container-low rounded-xl">
+          <XPBar />
         </div>
-        <Link
-          href="/practice"
-          className="block w-full py-3 px-4 bg-gradient-to-r from-primary to-secondary text-on-primary rounded-full font-bold text-sm hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 text-center"
-        >
-          Start Daily Review
-        </Link>
+
+        {/* User Profile */}
+        <div className="p-4 bg-surface-container-low rounded-xl">
+          <div className="flex items-center gap-3 mb-4">
+            <LevelBadge size="sm" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-on-surface truncate">{user.name}</p>
+              <p className="text-xs text-on-surface-variant truncate">{user.email}</p>
+            </div>
+          </div>
+          <Link
+            href="/practice"
+            className="block w-full py-3 px-4 bg-gradient-to-r from-primary to-secondary text-on-primary rounded-full font-bold text-sm hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 text-center"
+          >
+            Start Daily Review
+          </Link>
+        </div>
       </div>
     </aside>
   );

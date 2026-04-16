@@ -38,6 +38,10 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap"
+        />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/favicon.ico" />
         <meta name="theme-color" content="#4648d4" />
@@ -46,13 +50,11 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
-        {/* Non-blocking Material Symbols: loaded after initial paint */}
-        <Script id="material-symbols-loader" strategy="afterInteractive">
+        <Script id="sw-register" strategy="afterInteractive">
           {`
-            var l = document.createElement('link');
-            l.rel = 'stylesheet';
-            l.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap';
-            document.head.appendChild(l);
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js').catch(function() {});
+            }
           `}
         </Script>
       </body>

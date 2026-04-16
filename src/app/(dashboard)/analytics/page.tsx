@@ -2,6 +2,9 @@
 
 import { trpc } from '@/trpc/client';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { ForecastChart } from '@/components/ForecastChart';
+import { MasteryMap } from '@/components/MasteryMap';
+import { PageTransition, StaggerContainer, StaggerItem } from '@/components/Animations';
 import Link from 'next/link';
 
 const QUALITY_LABELS: Record<number, { label: string; color: string }> = {
@@ -135,6 +138,12 @@ export default function AnalyticsPage() {
           <HeatmapGrid data={heatmap ?? []} />
         )}
       </div>
+
+      {/* Spaced Repetition Forecast */}
+      <ForecastChart />
+
+      {/* Character Mastery Map */}
+      <MasteryMap />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Weakest Characters */}

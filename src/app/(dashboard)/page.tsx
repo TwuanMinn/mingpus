@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { trpc } from "@/trpc/client";
 import { SpeakButton } from "@/components/SpeakButton";
+import { DailyChallenges } from "@/components/DailyChallenges";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const DAILY_GOAL_KEY = 'dc-daily-goal';
@@ -27,6 +28,7 @@ export default function Dashboard() {
   const { data: dueCards, isLoading: cardsLoading } = trpc.getDueCards.useQuery({ limit: 3 });
   const { data: streak } = trpc.getStudyStreak.useQuery();
   const { data: recentDecks, isLoading: decksLoading } = trpc.getRecentDecks.useQuery();
+  const { data: xpStatus } = trpc.getXPStatus.useQuery();
 
   const totalCards = stats?.totalCards ?? 0;
   const dueCount = stats?.dueForReview ?? 0;
@@ -59,6 +61,20 @@ export default function Dashboard() {
         <div className="space-y-1">
           <span className="text-[0.6875rem] font-bold tracking-[0.15em] text-primary uppercase">Welcome back, Scholar</span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-on-surface font-[family-name:var(--font-jakarta)] leading-tight">Your Daily Focus</h2>
+          {xpStatus && (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="material-symbols-outlined text-primary text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>{xpStatus.levelInfo.icon}</span>
+              <span className="text-xs font-bold text-on-surface-variant">Level {xpStatus.level} {xpStatus.levelInfo.title}</span>
+              <span className="text-[10px] text-outline">·</span>
+              <span className="text-xs font-bold text-primary">{xpStatus.totalXP.toLocaleString()} XP</span>
+              {xpStatus.currentStreak > 0 && (
+                <>
+                  <span className="text-[10px] text-outline">·</span>
+                  <span className="text-xs font-bold text-secondary">{xpStatus.currentStreak}🔥</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-3 sm:gap-4 w-full sm:w-auto">
           <div className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-surface-container-low rounded-xl text-center">
@@ -302,23 +318,28 @@ export default function Dashboard() {
         </div>
 
         {/* Session Quick Start */}
-        <div className="sm:col-span-2 lg:col-span-7 grid grid-cols-2 gap-3 sm:gap-6">
+        <div className="sm:col-span-2 lg:col-span-7 grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {[
-            { icon: "bolt", title: "Rapid Fire", desc: "5-minute sprint to reinforce high-frequency words.", hoverBg: "hover:bg-primary-fixed", iconColor: "text-primary", href: "/practice" },
-            { icon: "edit_note", title: "Stroke Master", desc: "Focus exclusively on handwriting and radical order.", hoverBg: "hover:bg-secondary-fixed", iconColor: "text-secondary", href: "/strokes" },
-            { icon: "quiz", title: "Quiz Mode", desc: "Test your knowledge with multiple choice questions.", hoverBg: "hover:bg-surface-container-high", iconColor: "text-tertiary", href: "/quiz" },
-            { icon: "explore", title: "Expansion", desc: "Discover new characters based on your level.", hoverBg: "hover:bg-surface-container-high", iconColor: "text-on-surface-variant", href: "/discover" },
+            { icon: "bolt", title: "Rapid Fire", desc: "Spaced repetition sprint.", hoverBg: "hover:bg-primary-fixed", iconColor: "text-primary", href: "/practice" },
+            { icon: "swap_horiz", title: "Reverse", desc: "Meaning → Character recall.", hoverBg: "hover:bg-secondary-fixed", iconColor: "text-secondary", href: "/practice/reverse" },
+            { icon: "headphones", title: "Listening", desc: "Audio → Character match.", hoverBg: "hover:bg-tertiary-fixed", iconColor: "text-tertiary", href: "/practice/listening" },
+            { icon: "edit_note", title: "Strokes", desc: "Handwriting & radical order.", hoverBg: "hover:bg-secondary-fixed", iconColor: "text-secondary", href: "/strokes" },
+            { icon: "quiz", title: "Quiz", desc: "Multiple choice knowledge test.", hoverBg: "hover:bg-surface-container-high", iconColor: "text-tertiary", href: "/quiz" },
+            { icon: "explore", title: "Discover", desc: "Explore new characters.", hoverBg: "hover:bg-surface-container-high", iconColor: "text-on-surface-variant", href: "/discover" },
           ].map((card) => (
-            <Link key={card.title} href={card.href} className={`bg-surface-container-lowest rounded-xl p-4 sm:p-6 lg:p-8 ${card.hoverBg} transition-colors cursor-pointer flex flex-col justify-between gap-3 sm:gap-4`} aria-label={`${card.title}: ${card.desc}`}>
-              <span className={`material-symbols-outlined text-2xl sm:text-3xl lg:text-4xl ${card.iconColor}`}>{card.icon}</span>
+            <Link key={card.title} href={card.href} className={`bg-surface-container-lowest rounded-xl p-4 sm:p-6 ${card.hoverBg} transition-colors cursor-pointer flex flex-col justify-between gap-3 sm:gap-4`} aria-label={`${card.title}: ${card.desc}`}>
+              <span className={`material-symbols-outlined text-2xl sm:text-3xl ${card.iconColor}`}>{card.icon}</span>
               <div>
-                <h4 className="font-[family-name:var(--font-jakarta)] font-bold text-base sm:text-lg lg:text-xl text-on-surface mb-1 sm:mb-2">{card.title}</h4>
-                <p className="text-xs sm:text-sm text-on-surface-variant line-clamp-2">{card.desc}</p>
+                <h4 className="font-[family-name:var(--font-jakarta)] font-bold text-sm sm:text-base text-on-surface mb-1">{card.title}</h4>
+                <p className="text-xs text-on-surface-variant line-clamp-2">{card.desc}</p>
               </div>
             </Link>
           ))}
         </div>
       </div>
+
+      {/* Daily Challenges */}
+      <DailyChallenges />
 
       {/* Achievement Banner — Milestone-aware */}
       <section className="relative w-full min-h-[120px] sm:h-48 rounded-xl overflow-hidden flex items-center p-6 sm:p-8 lg:p-12" aria-label="Study achievement">

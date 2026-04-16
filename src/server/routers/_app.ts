@@ -6,6 +6,7 @@ import { practiceRouter } from './practice';
 import { dictionaryRouter } from './dictionary';
 import { quizRouter } from './quiz';
 import { importRouter } from './import';
+import { analyticsRouter } from './analytics';
 
 // mergeRouters keeps a flat namespace so all existing client calls
 // (e.g. trpc.getDecks, trpc.submitReview) continue to work unchanged.
@@ -17,6 +18,7 @@ export const appRouter = t.mergeRouters(
   dictionaryRouter,
   quizRouter,
   importRouter,
+  analyticsRouter,
 );
 
 export type AppRouter = typeof appRouter;

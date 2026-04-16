@@ -19,7 +19,7 @@ describe('Flashcard Component — Deep Interaction Suite', () => {
 
     it('renders "Tap to reveal" prompt', () => {
       render(<Flashcard {...createProps()} />);
-      expect(screen.getByText('Tap to reveal')).toBeInTheDocument();
+      expect(screen.getByText(/Tap to reveal/)).toBeInTheDocument();
     });
 
     it('renders pinyin text', () => {

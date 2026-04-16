@@ -13,7 +13,7 @@ describe('Flashcard Component', () => {
   it('renders the character on the front of the card', () => {
     render(<Flashcard {...defaultProps} />);
     expect(screen.getByText('猫')).toBeInTheDocument();
-    expect(screen.getByText('Tap to reveal')).toBeInTheDocument();
+    expect(screen.getByText(/Tap to reveal/)).toBeInTheDocument();
   });
 
   it('renders pinyin and meaning on the back of the card', () => {

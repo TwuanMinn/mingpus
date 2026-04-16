@@ -58,9 +58,6 @@ export function Header({ user }: { user: UserInfo }) {
         </form>
         <div className="flex items-center gap-2 sm:gap-4 text-primary">
           <ThemeToggle />
-          <button className="hover:opacity-80 transition-opacity p-1" aria-label="Notifications">
-            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">notifications</span>
-          </button>
           <button
             onClick={handleSignOut}
             className="hover:opacity-80 transition-opacity p-1"

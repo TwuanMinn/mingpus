@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -8,48 +8,90 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 export default function QuizPage() {
   usePageTitle('Quiz');
   const { data: questions, isLoading, refetch } = trpc.getQuizQuestions.useQuery({ count: 10 });
+  const submitAnswer = trpc.submitQuizAnswer.useMutation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [answered, setAnswered] = useState(false);
+  const [result, setResult] = useState<{ isCorrect: boolean; correctAnswer: string } | null>(null);
 
   const quizCards = questions ?? [];
   const total = quizCards.length;
   const q = quizCards[currentIndex];
   const letters = ['A', 'B', 'C', 'D'];
 
-  const handleSelect = (option: string) => {
-    if (answered) return;
+  const handleSelect = useCallback(async (option: string) => {
+    if (answered || !q) return;
     setSelected(option);
     setAnswered(true);
-    if (option === q.correctAnswer) {
+
+    // Server-side validation — correctAnswer is never on the client
+    const res = await submitAnswer.mutateAsync({
+      flashcardId: q.id,
+      selectedAnswer: option,
+    });
+
+    setResult(res);
+    if (res.isCorrect) {
       setScore(s => s + 50);
       setStreak(s => s + 1);
     } else {
       setStreak(0);
     }
-  };
+  }, [answered, q, submitAnswer]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setSelected(null);
     setAnswered(false);
+    setResult(null);
     setCurrentIndex(i => i + 1);
-  };
+  }, []);
 
-  const handleRestart = () => {
+  const handleRestart = useCallback(() => {
     setCurrentIndex(0);
     setSelected(null);
     setAnswered(false);
+    setResult(null);
     setScore(0);
     setStreak(0);
     refetch();
-  };
+  }, [refetch]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (!answered && q) {
+        const idx = ['a', 'b', 'c', 'd'].indexOf(e.key.toLowerCase());
+        if (idx >= 0 && idx < q.options.length) {
+          e.preventDefault();
+          handleSelect(q.options[idx]);
+        }
+        // Number keys 1-4
+        const numIdx = ['1', '2', '3', '4'].indexOf(e.key);
+        if (numIdx >= 0 && numIdx < q.options.length) {
+          e.preventDefault();
+          handleSelect(q.options[numIdx]);
+        }
+      }
+
+      if (answered && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        if (currentIndex < total - 1) {
+          handleNext();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [answered, q, handleSelect, handleNext, currentIndex, total]);
 
   // Save quiz result to history on completion
   const quizDone = !isLoading && (total === 0 || currentIndex >= total);
 
-  // Load history from localStorage
   const getHistory = (): { date: string; score: number; correct: number; total: number }[] => {
     if (typeof window === 'undefined') return [];
     try {
@@ -82,6 +124,12 @@ export default function QuizPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-[family-name:var(--font-jakarta)] font-extrabold text-on-surface">
             {total === 0 ? 'No Cards Available' : 'Quiz Complete!'}
           </h2>
+          {total === 0 && (
+            <div className="space-y-3">
+              <span className="material-symbols-outlined text-5xl text-outline/40">library_add</span>
+              <p className="text-on-surface-variant">Add some cards to your decks to start quizzing!</p>
+            </div>
+          )}
           {total > 0 && (
             <div className="flex justify-center gap-8 bg-surface-container-low px-8 py-4 rounded-xl">
               <div className="text-center">
@@ -162,7 +210,7 @@ export default function QuizPage() {
           </div>
           <div className="relative z-10 flex flex-col items-center">
             <span className="text-[6rem] sm:text-[10rem] md:text-[14rem] chinese-char font-bold text-on-surface tracking-[0.05em] leading-none mb-4">{q.character}</span>
-            {answered && (
+            {answered && result && (
               <div className="flex items-center gap-2">
                 <p className="text-lg sm:text-xl font-medium text-primary">{q.pinyin}</p>
                 <SpeakButton text={q.character} size="md" />
@@ -183,7 +231,7 @@ export default function QuizPage() {
         <div className="lg:col-span-5 flex flex-col gap-3 sm:gap-4">
           {q.options.map((opt, i) => {
             const isSelected = selected === opt;
-            const isCorrect = opt === q.correctAnswer;
+            const isCorrect = result ? opt === result.correctAnswer : false;
             const showCorrect = answered && isCorrect;
             const showWrong = answered && isSelected && !isCorrect;
 
@@ -191,7 +239,7 @@ export default function QuizPage() {
               <button
                 key={i}
                 onClick={() => handleSelect(opt)}
-                disabled={answered}
+                disabled={answered || submitAnswer.isPending}
                 className={`w-full p-4 sm:p-6 text-left rounded-xl transition-all flex items-center justify-between group ${
                   showCorrect
                     ? "bg-primary-fixed border-l-4 border-primary ring-2 ring-primary/20"
@@ -238,6 +286,15 @@ export default function QuizPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Keyboard shortcuts — desktop only */}
+      <div className="hidden lg:flex fixed bottom-4 left-1/2 -translate-x-1/2 bg-surface-container-low/90 backdrop-blur-md rounded-full px-6 py-2 shadow-lg shadow-on-surface/5 items-center gap-4 text-[10px] text-on-surface-variant font-medium z-20 border border-outline-variant/20">
+        <span><kbd className="px-1.5 py-0.5 bg-surface-container-high rounded font-mono text-[9px]">A-D</kbd> Select</span>
+        <span className="text-outline">·</span>
+        <span><kbd className="px-1.5 py-0.5 bg-surface-container-high rounded font-mono text-[9px]">1-4</kbd> Select</span>
+        <span className="text-outline">·</span>
+        <span><kbd className="px-1.5 py-0.5 bg-surface-container-high rounded font-mono text-[9px]">Enter</kbd> Next</span>
       </div>
     </div>
   );

@@ -9,6 +9,14 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 const DAILY_GOAL_KEY = 'dc-daily-goal';
 const DEFAULT_GOAL = 20;
 
+const DECK_ICONS = ['auto_stories', 'restaurant', 'flight', 'work', 'school', 'favorite', 'public', 'psychology'];
+const DECK_COLORS = [
+  { bg: 'bg-primary-fixed', text: 'text-primary' },
+  { bg: 'bg-secondary-fixed', text: 'text-secondary' },
+  { bg: 'bg-tertiary-fixed', text: 'text-tertiary' },
+  { bg: 'bg-primary-fixed', text: 'text-primary' },
+];
+
 function StatSkeleton() {
   return <div className="h-6 w-12 bg-surface-container-high rounded animate-pulse" />;
 }
@@ -18,11 +26,15 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = trpc.getDashboardStats.useQuery();
   const { data: dueCards, isLoading: cardsLoading } = trpc.getDueCards.useQuery({ limit: 3 });
   const { data: streak } = trpc.getStudyStreak.useQuery();
+  const { data: recentDecks, isLoading: decksLoading } = trpc.getRecentDecks.useQuery();
 
   const totalCards = stats?.totalCards ?? 0;
   const dueCount = stats?.dueForReview ?? 0;
   const totalReviewed = streak?.totalReviewed ?? 0;
   const hasStudiedToday = streak?.hasStudiedToday ?? false;
+  const wordsLearned = stats?.wordsLearned ?? 0;
+  const accuracy = stats?.accuracy ?? 0;
+  const streakDays = streak?.streakDays ?? 0;
 
   // Configurable daily goal
   const [dailyGoal, setDailyGoal] = useState(DEFAULT_GOAL);
@@ -60,7 +72,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* NEW: Progress & Lists (from user request) */}
+      {/* Study Progress & Recent Word Lists — REAL DATA */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-8">
         {/* Study Progress */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
@@ -71,40 +83,40 @@ export default function Dashboard() {
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">
             <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Study Progress</h3>
-            <Link href="#" className="font-bold text-sm text-primary flex items-center hover:underline">
-              Weekly Review <span className="material-symbols-outlined text-[16px] ml-1">north_east</span>
+            <Link href="/analytics" className="font-bold text-sm text-primary flex items-center hover:underline">
+              Analytics <span className="material-symbols-outlined text-[16px] ml-1">north_east</span>
             </Link>
           </div>
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Words Learned */}
+            {/* Words Learned — REAL DATA */}
             <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10 transition-transform hover:-translate-y-1 hover:shadow-md">
               <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Words Learned</p>
-              <p className="text-3xl font-black text-on-surface mb-3">1,248</p>
+              {statsLoading ? <StatSkeleton /> : <p className="text-3xl font-black text-on-surface mb-3">{wordsLearned.toLocaleString()}</p>}
               <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-[75%]"></div>
+                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${totalCards > 0 ? Math.round((wordsLearned / totalCards) * 100) : 0}%` }}></div>
               </div>
             </div>
-            {/* Daily Streak */}
+            {/* Daily Streak — REAL DATA */}
             <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10 transition-transform hover:-translate-y-1 hover:shadow-md">
               <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Daily Streak</p>
-              <p className="text-3xl font-black text-on-surface mb-3">42</p>
+              {statsLoading ? <StatSkeleton /> : <p className="text-3xl font-black text-on-surface mb-3">{streakDays}</p>}
               <p className="text-xs font-bold text-primary flex items-center mt-2">
                 <span className="material-symbols-outlined text-[14px] mr-1" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
-                Top 5% this month
+                {streakDays > 7 ? `${streakDays}-day streak! 🔥` : streakDays > 0 ? 'Keep it going!' : 'Start your streak!'}
               </p>
             </div>
-            {/* Accuracy */}
+            {/* Accuracy — REAL DATA */}
             <div className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/10 transition-transform hover:-translate-y-1 hover:shadow-md">
               <p className="text-[10px] font-bold text-outline uppercase tracking-widest mb-2">Accuracy</p>
-              <p className="text-3xl font-black text-on-surface mb-3">94%</p>
+              {statsLoading ? <StatSkeleton /> : <p className="text-3xl font-black text-on-surface mb-3">{accuracy}%</p>}
               <p className="text-xs font-medium text-on-surface-variant mt-2">
-                +2% from last week
+                {accuracy >= 90 ? 'Excellent recall!' : accuracy >= 70 ? 'Good progress' : accuracy > 0 ? 'Keep practicing' : 'No data yet'}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Recent Word Lists */}
+        {/* Recent Word Lists — REAL DATA */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
           <svg className="absolute -bottom-8 -right-8 w-[14rem] sm:w-[20rem] h-[14rem] sm:h-[20rem] text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -118,60 +130,52 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="relative z-10 space-y-3 sm:space-y-4">
-            {/* List 1 */}
-            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary-fixed text-primary rounded-xl flex items-center justify-center">
-                  <span className="material-symbols-outlined">restaurant</span>
+            {decksLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-surface-container-lowest p-4 rounded-2xl animate-pulse flex items-center gap-4">
+                  <div className="w-12 h-12 bg-surface-container-high rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-24 bg-surface-container-high rounded" />
+                    <div className="h-3 w-32 bg-surface-container-high rounded" />
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-on-surface">Dining & Food</h4>
-                  <p className="text-xs text-on-surface-variant mt-0.5">24 words • 85% mastered</p>
-                </div>
+              ))
+            ) : recentDecks && recentDecks.length > 0 ? (
+              recentDecks.map((deck, i) => {
+                const color = DECK_COLORS[i % DECK_COLORS.length];
+                const icon = DECK_ICONS[i % DECK_ICONS.length];
+                return (
+                  <Link key={deck.id} href="/decks"
+                    className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 ${color.bg} ${color.text} rounded-xl flex items-center justify-center`}>
+                        <span className="material-symbols-outlined">{icon}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-on-surface">{deck.title}</h4>
+                        <p className="text-xs text-on-surface-variant mt-0.5">
+                          {deck.cardCount} words • {deck.masteryPercent > 0 ? `${deck.masteryPercent}% mastered` : 'New'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="hidden sm:block w-24 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${deck.masteryPercent}%` }}></div>
+                      </div>
+                      <span className="material-symbols-outlined text-outline">chevron_right</span>
+                    </div>
+                  </Link>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 space-y-3">
+                <span className="material-symbols-outlined text-4xl text-outline/40">library_add</span>
+                <p className="text-sm text-on-surface-variant">No decks yet</p>
+                <Link href="/decks/new" className="inline-block px-4 py-2 bg-primary text-on-primary rounded-full text-xs font-bold hover:opacity-90 transition">
+                  Create First Deck
+                </Link>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="hidden sm:block w-24 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full w-[85%]"></div>
-                </div>
-                <span className="material-symbols-outlined text-outline">chevron_right</span>
-              </div>
-            </div>
-            {/* List 2 */}
-            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-secondary-fixed text-secondary rounded-xl flex items-center justify-center">
-                  <span className="material-symbols-outlined">flight</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-on-surface">Travel & Transport</h4>
-                  <p className="text-xs text-on-surface-variant mt-0.5">18 words • 40% mastered</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="hidden sm:block w-24 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full w-[40%]"></div>
-                </div>
-                <span className="material-symbols-outlined text-outline">chevron_right</span>
-              </div>
-            </div>
-            {/* List 3 */}
-            <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-tertiary-fixed text-tertiary rounded-xl flex items-center justify-center">
-                  <span className="material-symbols-outlined">work</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-on-surface">Business Chinese</h4>
-                  <p className="text-xs text-on-surface-variant mt-0.5">32 words • New</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="hidden sm:block w-24 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                  <div className="h-full bg-surface-container-high rounded-full w-[0%]"></div>
-                </div>
-                <span className="material-symbols-outlined text-outline">chevron_right</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -229,7 +233,7 @@ export default function Dashboard() {
             )}
             <div className="space-y-3 sm:space-y-4">
               <div className="flex justify-between text-sm">
-                <span className="text-on-surface-variant font-medium">Today's Progress</span>
+                <span className="text-on-surface-variant font-medium">Today&apos;s Progress</span>
                 {statsLoading ? <StatSkeleton /> : <span className="font-bold text-on-surface">{todayReviewed} / {dailyGoal}</span>}
               </div>
               <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden" role="progressbar" aria-label="Daily goal progress" aria-valuenow={goalProgress} aria-valuemax={100}>
@@ -260,7 +264,6 @@ export default function Dashboard() {
           </div>
           <div className="space-y-4 sm:space-y-6">
             {cardsLoading ? (
-              // Inline skeletons for due cards
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-4 sm:gap-6 animate-pulse">
                   <div className="w-12 h-12 sm:w-16 sm:h-16 bg-surface-container-high rounded-xl flex-shrink-0" />
@@ -289,7 +292,11 @@ export default function Dashboard() {
                 </div>
               </div>
             )) : (
-              <p className="text-sm text-on-surface-variant text-center py-4">No cards due for review! 🎉</p>
+              <div className="text-center py-6 space-y-3">
+                <span className="material-symbols-outlined text-4xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>task_alt</span>
+                <p className="text-sm text-on-surface-variant">No cards due for review! 🎉</p>
+                <p className="text-xs text-outline">All caught up — great work!</p>
+              </div>
             )}
           </div>
         </div>

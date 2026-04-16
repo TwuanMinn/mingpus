@@ -30,6 +30,8 @@ export const quizRouter = router({
       const shuffled = allCards.sort(() => Math.random() - 0.5);
       const questions = shuffled.slice(0, input.count);
 
+      // SECURITY FIX: Don't send correctAnswer to the client.
+      // Instead, let the client use submitQuizAnswer for validation.
       return questions.map(q => {
         const distractors = allCards
           .filter(c => c.id !== q.id)
@@ -40,15 +42,16 @@ export const quizRouter = router({
         const options = [...distractors, q.meaning].sort(() => Math.random() - 0.5);
 
         return {
-          ...q,
+          id: q.id,
+          character: q.character,
+          pinyin: q.pinyin,
+          hskLevel: q.hskLevel,
           options,
-          correctAnswer: q.meaning,
         };
       });
     }),
 
-  // Server-side answer validation — quiz pages can migrate to this
-  // instead of trusting client-side correctAnswer checks
+  // Server-side answer validation — secure quiz checking
   submitQuizAnswer: protectedProcedure
     .input(z.object({
       flashcardId: z.number(),

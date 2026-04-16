@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/db';
-import { flashcards, userProgress } from '@/db/schema';
+import { flashcards, userProgress, reviewLogs } from '@/db/schema';
 import { eq, and, lte, asc } from 'drizzle-orm';
 import { sm2, getDueDate } from '@/lib/sm2';
 
@@ -39,6 +39,7 @@ export const practiceRouter = router({
     .input(z.object({
       progressId: z.number(),
       quality: z.number().min(0).max(5),
+      responseTimeMs: z.number().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const [progress] = await db
@@ -66,6 +67,14 @@ export const practiceRouter = router({
         efactor: result.efactor,
         dueDate,
       }).where(eq(userProgress.id, input.progressId));
+
+      // Log the review event for analytics (Phase 3B)
+      await db.insert(reviewLogs).values({
+        userId: ctx.session.user.id,
+        flashcardId: progress.flashcardId,
+        quality: input.quality,
+        responseTimeMs: input.responseTimeMs ?? null,
+      });
 
       return result;
     }),

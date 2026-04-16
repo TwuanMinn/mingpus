@@ -20,6 +20,7 @@ const navItems = [
   { href: "/quiz", icon: "quiz", label: "Quiz" },
   { href: "/import", icon: "library_add", label: "Import" },
   { href: "/strokes", icon: "draw", label: "Strokes" },
+  { href: "/analytics", icon: "insights", label: "Analytics" },
 ];
 
 export function Sidebar({ user }: { user: UserInfo }) {

@@ -162,6 +162,19 @@ export const studySessions = sqliteTable("study_sessions", {
   index("sessions_date_idx").on(table.userId, table.date),
 ]);
 
+export const reviewLogs = sqliteTable("review_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }).notNull(),
+  flashcardId: integer("flashcard_id").references(() => flashcards.id, { onDelete: "cascade" }).notNull(),
+  quality: integer("quality").notNull(),
+  responseTimeMs: integer("response_time_ms"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => [
+  index("review_logs_userId_idx").on(table.userId),
+  index("review_logs_createdAt_idx").on(table.userId, table.createdAt),
+  index("review_logs_flashcardId_idx").on(table.flashcardId),
+]);
+
 // ─── App Relations ───
 
 export const decksRelations = relations(decks, ({ one, many }) => ({
@@ -180,4 +193,9 @@ export const userProgressRelations = relations(userProgress, ({ one }) => ({
 
 export const studySessionsRelations = relations(studySessions, ({ one }) => ({
   user: one(user, { fields: [studySessions.userId], references: [user.id] }),
+}));
+
+export const reviewLogsRelations = relations(reviewLogs, ({ one }) => ({
+  user: one(user, { fields: [reviewLogs.userId], references: [user.id] }),
+  flashcard: one(flashcards, { fields: [reviewLogs.flashcardId], references: [flashcards.id] }),
 }));

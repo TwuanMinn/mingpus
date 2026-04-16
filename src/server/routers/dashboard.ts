@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/db';
 import { decks, flashcards, userProgress, studySessions } from '@/db/schema';
-import { eq, count, and, lte, gt, sql, desc } from 'drizzle-orm';
+import { eq, count, and, lte, gt, sql, desc, sum } from 'drizzle-orm';
 
 export const dashboardRouter = router({
   getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
@@ -19,11 +19,82 @@ export const dashboardRouter = router({
       .from(userProgress)
       .where(and(eq(userProgress.userId, userId), lte(userProgress.dueDate, new Date())));
 
+    // Words learned = cards reviewed at least once (repetition > 0)
+    const [learnedResult] = await db
+      .select({ count: count() })
+      .from(userProgress)
+      .where(and(eq(userProgress.userId, userId), gt(userProgress.repetition, 0)));
+
+    // Overall accuracy from study_sessions
+    const [accuracyResult] = await db
+      .select({
+        totalReviewed: sum(studySessions.cardsReviewed),
+        totalCorrect: sum(studySessions.cardsCorrect),
+      })
+      .from(studySessions)
+      .where(eq(studySessions.userId, userId));
+
+    const totalReviewed = Number(accuracyResult?.totalReviewed ?? 0);
+    const totalCorrect = Number(accuracyResult?.totalCorrect ?? 0);
+    const accuracy = totalReviewed > 0 ? Math.round((totalCorrect / totalReviewed) * 100) : 0;
+
     return {
       totalDecks: deckResult?.count ?? 0,
       totalCards: cardResult?.count ?? 0,
       dueForReview: dueResult?.count ?? 0,
+      wordsLearned: learnedResult?.count ?? 0,
+      accuracy,
     };
+  }),
+
+  // Recent decks with mastery percentage
+  getRecentDecks: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const userDecks = await db
+      .select({
+        id: decks.id,
+        title: decks.title,
+        description: decks.description,
+        createdAt: decks.createdAt,
+        cardCount: count(flashcards.id),
+      })
+      .from(decks)
+      .leftJoin(flashcards, eq(flashcards.deckId, decks.id))
+      .where(eq(decks.userId, userId))
+      .groupBy(decks.id)
+      .orderBy(desc(decks.createdAt))
+      .limit(3);
+
+    // For each deck, compute mastery % (cards with repetition >= 3)
+    const enriched = await Promise.all(
+      userDecks.map(async (deck) => {
+        if (deck.cardCount === 0) return { ...deck, masteryPercent: 0 };
+
+        const deckCardIds = await db
+          .select({ id: flashcards.id })
+          .from(flashcards)
+          .where(eq(flashcards.deckId, deck.id));
+
+        if (deckCardIds.length === 0) return { ...deck, masteryPercent: 0 };
+
+        const [masteredResult] = await db
+          .select({ count: count() })
+          .from(userProgress)
+          .where(
+            and(
+              eq(userProgress.userId, userId),
+              gt(userProgress.repetition, 2),
+              sql`${userProgress.flashcardId} IN (SELECT id FROM flashcards WHERE deck_id = ${deck.id})`
+            )
+          );
+
+        const masteryPercent = Math.round(((masteredResult?.count ?? 0) / deck.cardCount) * 100);
+        return { ...deck, masteryPercent };
+      })
+    );
+
+    return enriched;
   }),
 
   getStudyStreak: protectedProcedure.query(async ({ ctx }) => {

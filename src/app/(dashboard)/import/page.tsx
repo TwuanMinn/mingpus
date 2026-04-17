@@ -115,13 +115,13 @@ export default function ImportPage() {
     }
   };
 
+  const emptyAnswer: UserAnswer = { pinyin: '', english: '', vietnamese: '' };
+
   const updateAnswer = (cardId: number, field: keyof UserAnswer, value: string) => {
     setAnswers((prev) => ({
       ...prev,
       [cardId]: {
-        pinyin: '',
-        english: '',
-        vietnamese: '',
+        ...emptyAnswer,
         ...prev[cardId],
         [field]: value,
       },

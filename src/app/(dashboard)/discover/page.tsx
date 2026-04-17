@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { trpc } from '@/trpc/client';
 import { keepPreviousData } from '@tanstack/react-query';
 import { SpeakButton } from '@/components/SpeakButton';
+import { ConfirmationChip } from '@/components/MicroInteractions';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const discoverImages = [
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBfAAnTVhaVA94KzTS774NcIw3y9pZtkXZ1ErYRspQg8zKYAD8WlJ5mPLdYwzWQk4He7Ecrisy07rDeUjyv4QNMhKKsEFaLlKAr-92EbnkO2xt_7w2jcT1BrQ2YfCwRPHZRbhrZOEEiOMd2uMAMy3ag6TvKdMvfoiSlPm0HYjI6--wiSLWQzEmnCxxcZVk9K3Jl7iLLMPfm6jKWeMBiryxobUS9xNxaTHryc1YP1y89heZXvOwQTHKEIpxGMrLnbMnP3WnoKE45Pbis",
@@ -21,16 +23,42 @@ const PAGE_SIZE = 8;
 
 export default function DiscoverPage() {
   usePageTitle('Discover');
+  const [tab, setTab] = useState<'characters' | 'community'>('characters');
   const [hskFilter, setHskFilter] = useState<number | undefined>(undefined);
   const [page, setPage] = useState(0);
   const [savedChars, setSavedChars] = useState<Set<number>>(new Set());
+  const [deckSearch, setDeckSearch] = useState('');
+  const [forking, setForking] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const { data: stats } = trpc.getDashboardStats.useQuery();
-  const { data: decksData } = trpc.getDecks.useQuery();
-  const addCard = trpc.addCard.useMutation();
+  const { data: stats } = trpc.dashboard.getDashboardStats.useQuery();
+  const { data: decksData } = trpc.deck.getDecks.useQuery();
+  const addCard = trpc.flashcard.addCard.useMutation();
   const utils = trpc.useUtils();
-  const { data: results, isLoading } = trpc.searchCharacters.useQuery(
-    { query: '%', hskLevel: hskFilter },
+
+  // Community decks
+  const { data: communityDecks, isLoading: communityLoading } = trpc.community.browseCommunityDecks.useQuery(
+    { search: deckSearch || undefined, limit: 24 },
+    { enabled: tab === 'community', staleTime: 30_000 },
+  );
+  const toggleLike = trpc.community.toggleLike.useMutation({
+    onSuccess: () => utils.community.browseCommunityDecks.invalidate(),
+  });
+  const forkDeck = trpc.community.forkDeck.useMutation({
+    onSuccess: (result) => {
+      utils.deck.getDecks.invalidate();
+      showToast(`Forked! ${result.cardsCopied} cards added to your collection.`);
+      setForking(null);
+    },
+    onError: () => setForking(null),
+  });
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
+  const { data: results, isLoading } = trpc.dictionary.browseAll.useQuery(
+    { hskLevel: hskFilter },
     { placeholderData: keepPreviousData }
   );
 
@@ -41,7 +69,116 @@ export default function DiscoverPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0">
       <section className="p-4 sm:p-6 lg:p-8 xl:p-12 space-y-8 sm:space-y-12 pb-24 md:pb-8">
-        {/* Filters & Categories */}
+
+        {/* Tab switcher */}
+        <div className="flex gap-1 bg-surface-container-low rounded-2xl p-1 w-fit">
+          {(['characters', 'community'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all capitalize ${
+                tab === t
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              {t === 'characters' ? 'Characters' : 'Community Decks'}
+            </button>
+          ))}
+        </div>
+
+        {/* Community Decks panel */}
+        {tab === 'community' && (
+          <div className="space-y-5">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+              <input
+                type="search"
+                placeholder="Search decks…"
+                value={deckSearch}
+                onChange={(e) => setDeckSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-surface-container-low rounded-2xl border border-outline-variant/20 text-on-surface placeholder:text-on-surface-variant/50 text-sm focus:outline-none focus:border-primary/40 transition-colors"
+              />
+            </div>
+
+            {communityLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-44 bg-surface-container-low rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : !communityDecks || communityDecks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+                <span className="material-symbols-outlined text-5xl text-on-surface-variant/30">explore_off</span>
+                <p className="text-on-surface-variant font-medium">No public decks yet.</p>
+                <p className="text-xs text-on-surface-variant/60">Publish one of your decks to start the community!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {communityDecks.map((deck, i) => (
+                  <motion.div
+                    key={deck.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: i * 0.03 }}
+                    className="bg-surface-container-low rounded-2xl p-5 border border-outline-variant/10 hover:border-primary/20 transition-all flex flex-col gap-3"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-start gap-2">
+                        <h3 className="font-bold text-on-surface text-sm leading-snug line-clamp-2 flex-1">{deck.title}</h3>
+                        {deck.forkOf && (
+                          <span className="text-[9px] font-bold bg-secondary/15 text-secondary px-1.5 py-0.5 rounded-full shrink-0">FORK</span>
+                        )}
+                      </div>
+                      {deck.description && <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">{deck.description}</p>}
+                      <p className="text-[10px] text-on-surface-variant/60 mt-1.5">by {deck.authorName}</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-[10px] text-on-surface-variant font-medium">
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">style</span>{deck.cardCount}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">fork_right</span>{deck.forkCount}
+                      </span>
+                    </div>
+
+                    {!deck.isOwn && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => toggleLike.mutate({ deckId: deck.id })}
+                          aria-label={deck.liked ? 'Unlike' : 'Like'}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all ${
+                            deck.liked ? 'bg-error/15 border-error/30 text-error' : 'bg-surface-container-high border-transparent text-on-surface-variant hover:border-outline-variant/30'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: deck.liked ? "'FILL' 1" : "'FILL' 0" }}>favorite</span>
+                          {deck.likeCount}
+                        </button>
+                        <button
+                          onClick={() => { setForking(deck.id); forkDeck.mutate({ deckId: deck.id }); }}
+                          disabled={forking === deck.id}
+                          aria-label={`Fork ${deck.title}`}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all disabled:opacity-50"
+                        >
+                          {forking === deck.id
+                            ? <span className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            : <span className="material-symbols-outlined text-[14px]">fork_right</span>}
+                          Fork
+                        </button>
+                      </div>
+                    )}
+                    {deck.isOwn && <p className="text-[10px] text-on-surface-variant/50 text-center">Your deck</p>}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Characters panel */}
+        {tab === 'characters' && (
+        <>{/* Filters & Categories */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-3 bg-surface-container-low p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex flex-wrap items-center gap-3 sm:gap-4">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-on-surface-variant w-full md:w-auto mb-1 md:mb-0">HSK Level</span>
@@ -99,8 +236,8 @@ export default function DiscoverPage() {
                             hskLevel: c.hskLevel ?? undefined,
                           });
                           setSavedChars(prev => new Set(prev).add(c.id));
-                          utils.getDecks.invalidate();
-                          utils.getDashboardStats.invalidate();
+                          utils.deck.getDecks.invalidate();
+                          utils.dashboard.getDashboardStats.invalidate();
                         } catch {}
                       }}
                       className={`p-1.5 rounded-full transition-colors ${
@@ -130,7 +267,7 @@ export default function DiscoverPage() {
           <div className="flex gap-6 sm:gap-8">
             <div>
               <span className="block text-[10px] font-bold uppercase tracking-widest opacity-60">Total Characters</span>
-              <span className="text-lg sm:text-xl font-bold text-on-surface">{stats?.totalCards ?? 0}</span>
+              <span className="text-lg sm:text-xl font-bold text-on-surface">{allChars.length}</span>
             </div>
             <div>
               <span className="block text-[10px] font-bold uppercase tracking-widest opacity-60">Showing</span>
@@ -149,6 +286,17 @@ export default function DiscoverPage() {
             </button>
           </div>
         </div>
+        </>)}
+
+        {/* Confirmation Chip */}
+        <ConfirmationChip
+          message={toast ?? ''}
+          icon="check_circle"
+          show={!!toast}
+          type="success"
+          onDone={() => setToast(null)}
+        />
+
       </section>
     </div>
   );

@@ -38,12 +38,20 @@ export const dashboardRouter = router({
     const totalCorrect = Number(accuracyResult?.totalCorrect ?? 0);
     const accuracy = totalReviewed > 0 ? Math.round((totalCorrect / totalReviewed) * 100) : 0;
 
+    // Today's actual review count from study sessions (fixes misleading totalCards - dueCount)
+    const today = new Date().toISOString().slice(0, 10);
+    const [todaySession] = await db
+      .select({ cardsReviewed: studySessions.cardsReviewed })
+      .from(studySessions)
+      .where(and(eq(studySessions.userId, userId), eq(studySessions.date, today)));
+
     return {
       totalDecks: deckResult?.count ?? 0,
       totalCards: cardResult?.count ?? 0,
       dueForReview: dueResult?.count ?? 0,
       wordsLearned: learnedResult?.count ?? 0,
       accuracy,
+      todayReviewed: todaySession?.cardsReviewed ?? 0,
     };
   }),
 

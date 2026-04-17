@@ -3,12 +3,62 @@ import { protectedProcedure, router } from '../trpc';
 import { db } from '@/db';
 import { characterSentences, characterRadicals, userProgress, flashcards, decks, notifications, studySessions } from '@/db/schema';
 import { eq, and, sql, desc, gte, lte } from 'drizzle-orm';
+import { generateExampleSentences } from '@/lib/ai-sentences';
 
 export const featuresRouter = router({
   // ─── Sentence Context ───
   getSentences: protectedProcedure
     .input(z.object({ character: z.string() }))
     .query(async ({ input }) => {
+      const existing = await db
+        .select()
+        .from(characterSentences)
+        .where(eq(characterSentences.character, input.character))
+        .limit(5);
+
+      if (existing.length > 0) return existing;
+
+      // No sentences in DB — auto-generate via Claude (fire-and-forget style:
+      // we kick off generation and return empty so the UI can show a "generating" state).
+      // The client can poll via generateSentences mutation then refetch.
+      return [];
+    }),
+
+  /** Generate AI example sentences for a character and persist them. */
+  generateSentences: protectedProcedure
+    .input(z.object({
+      character: z.string().min(1).max(4),
+      meaning: z.string(),
+      hskLevel: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // Idempotent — skip if already generated
+      const existing = await db
+        .select({ id: characterSentences.id })
+        .from(characterSentences)
+        .where(eq(characterSentences.character, input.character))
+        .limit(1);
+
+      if (existing.length > 0) {
+        return await db
+          .select()
+          .from(characterSentences)
+          .where(eq(characterSentences.character, input.character))
+          .limit(5);
+      }
+
+      const generated = await generateExampleSentences(input.character, input.meaning, input.hskLevel);
+
+      await db.insert(characterSentences).values(
+        generated.map((s) => ({
+          character: input.character,
+          sentence: s.sentence,
+          pinyin: s.pinyin,
+          translation: s.translation,
+          hskLevel: input.hskLevel ?? null,
+        })),
+      );
+
       return await db
         .select()
         .from(characterSentences)

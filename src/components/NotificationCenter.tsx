@@ -12,36 +12,49 @@ const TYPE_ICONS: Record<string, { icon: string; color: string }> = {
 
 export function NotificationCenter() {
   const [open, setOpen] = useState(false);
-  const { data: notifications } = trpc.getNotifications.useQuery();
-  const { data: unreadCount } = trpc.getUnreadCount.useQuery();
-  const markRead = trpc.markNotificationRead.useMutation();
-  const markAllRead = trpc.markAllNotificationsRead.useMutation();
-  const generateSummary = trpc.generateWeeklySummary.useMutation();
+  // Only fetch when the dropdown has been opened at least once — avoids 2
+  // network requests on every page load just to show a bell icon.
+  const [everOpened, setEverOpened] = useState(false);
+  const { data: notifications } = trpc.features.getNotifications.useQuery(undefined, {
+    enabled: everOpened,
+    staleTime: 60_000,
+  });
+  const { data: unreadCount } = trpc.features.getUnreadCount.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+  const markRead = trpc.features.markNotificationRead.useMutation();
+  const markAllRead = trpc.features.markAllNotificationsRead.useMutation();
+  const generateSummary = trpc.features.generateWeeklySummary.useMutation();
   const utils = trpc.useUtils();
+
+  const handleOpen = () => {
+    setEverOpened(true);
+    setOpen(true);
+  };
 
   const handleMarkRead = async (id: number) => {
     await markRead.mutateAsync({ id });
-    utils.getNotifications.invalidate();
-    utils.getUnreadCount.invalidate();
+    utils.features.getNotifications.invalidate();
+    utils.features.getUnreadCount.invalidate();
   };
 
   const handleMarkAllRead = async () => {
     await markAllRead.mutateAsync();
-    utils.getNotifications.invalidate();
-    utils.getUnreadCount.invalidate();
+    utils.features.getNotifications.invalidate();
+    utils.features.getUnreadCount.invalidate();
   };
 
   const handleGenerateSummary = async () => {
     await generateSummary.mutateAsync();
-    utils.getNotifications.invalidate();
-    utils.getUnreadCount.invalidate();
+    utils.features.getNotifications.invalidate();
+    utils.features.getUnreadCount.invalidate();
   };
 
   return (
     <div className="relative">
       {/* Bell Button */}
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => open ? setOpen(false) : handleOpen()}
         className="relative p-2 rounded-xl hover:bg-surface-container-high transition-colors"
         aria-label="Notifications"
       >
@@ -56,7 +69,7 @@ export function NotificationCenter() {
       {/* Dropdown */}
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-40" role="button" aria-label="Close notifications" tabIndex={-1} onClick={() => setOpen(false)} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)} />
           <div className="absolute right-0 top-12 w-80 sm:w-96 bg-surface-container-lowest rounded-2xl shadow-2xl shadow-on-surface/10 border border-outline-variant/20 z-50 overflow-hidden">
             {/* Header */}
             <div className="p-4 border-b border-outline-variant/10 flex justify-between items-center">
@@ -78,7 +91,7 @@ export function NotificationCenter() {
             </div>
 
             {/* List */}
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto" aria-live="polite" aria-label="Notifications list">
               {!notifications || notifications.length === 0 ? (
                 <div className="py-12 text-center">
                   <span className="material-symbols-outlined text-4xl text-outline/40">notifications_off</span>
@@ -97,8 +110,12 @@ export function NotificationCenter() {
                   return (
                     <div
                       key={n.id}
+                      role={!n.read ? "button" : undefined}
+                      tabIndex={!n.read ? 0 : undefined}
+                      aria-label={!n.read ? `Mark "${n.title}" as read` : undefined}
                       onClick={() => !n.read && handleMarkRead(n.id)}
-                      className={`p-4 border-b border-outline-variant/5 flex gap-3 cursor-pointer hover:bg-surface-container-low transition-colors ${
+                      onKeyDown={(e) => { if (!n.read && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleMarkRead(n.id); } }}
+                      className={`p-4 border-b border-outline-variant/5 flex gap-3 ${!n.read ? 'cursor-pointer hover:bg-surface-container-low' : ''} transition-colors ${
                         !n.read ? 'bg-primary-fixed/20' : ''
                       }`}
                     >

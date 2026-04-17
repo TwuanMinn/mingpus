@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
+@theme {
   --font-headline: 'Plus Jakarta Sans', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-chinese: 'Noto Sans SC', sans-serif;
@@ -194,6 +194,97 @@
   }
 }
 
+/* ── Theme overrides ─────────────────────────────────────────────────────── */
+[data-theme="light-jade"] {
+  --color-background: #f0faf5;
+  --color-surface: #f0faf5;
+  --color-on-background: #0d2018;
+  --color-on-surface: #0d2018;
+  --color-on-surface-variant: #3a5245;
+  --color-surface-container-low: #e5f5ec;
+  --color-surface-container: #d8eee2;
+  --color-surface-container-high: #cce8d8;
+  --color-primary: #059669;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #10b981;
+  --color-primary-fixed: #d1fae5;
+  --color-secondary: #0d9488;
+  --color-on-secondary: #ffffff;
+}
+
+[data-theme="light-classic"] {
+  --color-background: #fafafa;
+  --color-surface: #fafafa;
+  --color-on-background: #1a1a2e;
+  --color-on-surface: #1a1a2e;
+  --color-on-surface-variant: #5c5c72;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f3f6;
+  --color-surface-container: #eaeaef;
+  --color-surface-container-high: #e0e0e8;
+  --color-surface-container-highest: #d6d6e0;
+  --color-surface-bright: #fafafa;
+  --color-surface-dim: #d2d2dc;
+  --color-surface-variant: #e0e0e8;
+  --color-primary: #3b5998;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #4a6bb5;
+  --color-primary-fixed: #dce4f5;
+  --color-primary-fixed-dim: #a8bde0;
+  --color-secondary: #5a6e8a;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #7088a8;
+  --color-secondary-fixed: #dde5f0;
+  --color-tertiary: #4a5d8a;
+  --color-on-tertiary: #ffffff;
+  --color-outline: #8a8a9e;
+  --color-outline-variant: #c8c8d6;
+  --color-error: #c62828;
+  --color-on-error: #ffffff;
+  --color-inverse-surface: #2a2a38;
+  --color-inverse-on-surface: #f0f0f5;
+}
+
+[data-theme="ink-scroll"] {
+  --color-background: #18180f;
+  --color-surface: #18180f;
+  --color-on-background: #ede8d8;
+  --color-on-surface: #ede8d8;
+  --color-on-surface-variant: #b5ae95;
+  --color-surface-container-low: #201f15;
+  --color-surface-container: #27261a;
+  --color-surface-container-high: #2e2d20;
+  --color-primary: #d4a84b;
+  --color-on-primary: #18150a;
+  --color-primary-container: #b8922d;
+  --color-primary-fixed: #fef3c7;
+  --color-secondary: #a8967a;
+  --color-on-secondary: #18150a;
+}
+
+[data-theme="sunset"] {
+  --color-background: #1a0a04;
+  --color-surface: #1a0a04;
+  --color-on-background: #f5ddd0;
+  --color-on-surface: #f5ddd0;
+  --color-on-surface-variant: #c49a85;
+  --color-surface-container-low: #221008;
+  --color-surface-container: #2a150b;
+  --color-surface-container-high: #331a10;
+  --color-primary: #f97316;
+  --color-on-primary: #18080a;
+  --color-primary-container: #ea580c;
+  --color-primary-fixed: #ffedd5;
+  --color-secondary: #fb7185;
+  --color-on-secondary: #18080a;
+}
+
+/* ── Font size overrides ─────────────────────────────────────────────────── */
+[data-fontsize="small"]  { font-size: 13px; }
+[data-fontsize="medium"] { font-size: 15px; }
+[data-fontsize="large"]  { font-size: 17px; }
+[data-fontsize="xl"]     { font-size: 20px; }
+
 /* Custom grid columns for Mastery Map */
 @media (min-width: 640px) {
   .grid-cols-15 { grid-template-columns: repeat(15, minmax(0, 1fr)); }
@@ -203,4 +294,184 @@
 }
 @media (min-width: 1024px) {
   .grid-cols-25 { grid-template-columns: repeat(25, minmax(0, 1fr)); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOTION SYSTEM — Design System Specification §3
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* §3.1 Duration Scale */
+  --motion-instant:    0ms;
+  --motion-quick:      120ms;
+  --motion-snappy:     200ms;
+  --motion-smooth:     320ms;
+  --motion-deliberate: 480ms;
+  --motion-ambient:    800ms;
+
+  /* §3.2 Easing Tokens */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* §6 Accessibility — focus ring */
+  --color-focus: var(--color-primary);
+}
+
+/* §6 — Focus-visible: always visible on keyboard, hidden on pointer */
+*:focus { outline: none; }
+*:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* §6 — prefers-reduced-motion: reduce */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-instant:    0ms;
+    --motion-quick:      0ms;
+    --motion-snappy:     0ms;
+    --motion-smooth:     80ms;
+    --motion-deliberate: 80ms;
+    --motion-ambient:    0ms;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 80ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INTERACTIVE STATE UTILITIES — Design System Specification §2, §4
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* §4.3 Button Press Physics — opt in with .press-scale */
+.press-scale {
+  transition: transform var(--motion-quick) var(--ease-out),
+              box-shadow var(--motion-quick) var(--ease-out);
+}
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+/* §4.5 List item hover — reveal children with .reveal-on-hover */
+.reveal-on-hover .reveal-target {
+  opacity: 0;
+  transition: opacity var(--motion-quick) var(--ease-out);
+}
+.reveal-on-hover:hover .reveal-target,
+.reveal-on-hover:focus-within .reveal-target {
+  opacity: 1;
+}
+
+/* §2.1 Disabled state — universal */
+.state-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* §4.2 Form field shake (3 oscillations, ±4px, 300ms, once) */
+@keyframes field-shake {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-4px); }
+  30%  { transform: translateX(4px); }
+  45%  { transform: translateX(-4px); }
+  60%  { transform: translateX(4px); }
+  75%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+.shake-error {
+  animation: field-shake 300ms var(--ease-out) 1;
+}
+
+/* §4.2 Success pulse (opacity 0 → 0.2 → 0, 400ms) */
+@keyframes success-pulse {
+  0%   { box-shadow: 0 0 0 0 rgb(var(--color-primary) / 0); }
+  50%  { box-shadow: 0 0 0 4px rgb(var(--color-primary) / 0.15); }
+  100% { box-shadow: 0 0 0 0 rgb(var(--color-primary) / 0); }
+}
+.pulse-success {
+  animation: success-pulse 400ms var(--ease-out) 1;
+}
+
+/* §4.4 Toggle thumb slide — utility */
+.thumb-slide {
+  transition: transform var(--motion-snappy) var(--ease-inout),
+              background-color var(--motion-snappy) var(--ease-inout);
+}
+
+/* §5 Skeleton screen — shapes match content geometry */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-container-high) 25%,
+    var(--color-surface-container-highest) 37%,
+    var(--color-surface-container-high) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s var(--ease-inout) infinite;
+  border-radius: inherit;
+}
+
+/* Interactive card — elevate + shift on hover */
+.card-interactive {
+  transition: transform var(--motion-quick) var(--ease-out),
+              box-shadow var(--motion-quick) var(--ease-out);
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+}
+.card-interactive:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Button loading state — prevent width jump */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1.2em;
+  height: 1.2em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+  color: var(--color-on-primary);
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Ripple container basis */
+.ripple-base {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Sign-in button micro-interactions */
+@keyframes signin-ripple {
+  0%   { width: 0; height: 0; opacity: 0.4; }
+  100% { width: 400px; height: 400px; opacity: 0; }
+}
+@keyframes signin-shimmer {
+  0%, 100% { background-position: 200% 0; }
+  50%      { background-position: -200% 0; }
 }

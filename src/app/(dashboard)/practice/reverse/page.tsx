@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -12,11 +13,11 @@ import Link from 'next/link';
  */
 export default function ReversePracticePage() {
   usePageTitle('Reverse Practice');
-  const { data: dueCards, isLoading, refetch } = trpc.getDueCards.useQuery({ limit: 20 });
-  const submitReview = trpc.submitReview.useMutation({ onSuccess: () => refetch() });
-  const recordActivity = trpc.recordStudyActivity.useMutation();
-  const awardXP = trpc.awardXP.useMutation();
-  const updateChallenge = trpc.updateChallengeProgress.useMutation();
+  const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
+  const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
+  const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
+  const awardXP = trpc.gamification.awardXP.useMutation();
+  const updateChallenge = trpc.gamification.updateChallengeProgress.useMutation();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [options, setOptions] = useState<string[]>([]);
@@ -24,9 +25,9 @@ export default function ReversePracticePage() {
   const [answered, setAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [startTime, setStartTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(() => Date.now());
 
-  const cards = dueCards ?? [];
+  const cards = React.useMemo(() => dueCards ?? [], [dueCards]);
   const total = cards.length;
   const card = cards[currentIndex];
 
@@ -42,7 +43,9 @@ export default function ReversePracticePage() {
       .map(c => c.character);
 
     const opts = [...distractors, correctChar].sort(() => Math.random() - 0.5);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOptions(opts);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStartTime(Date.now());
   }, [card, cards]);
 
@@ -139,8 +142,8 @@ export default function ReversePracticePage() {
 
   if (isLoading || !card) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      <div className="flex-1 flex items-center justify-center" role="status" aria-label="Loading practice cards">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -189,6 +192,8 @@ export default function ReversePracticePage() {
               key={`${opt}-${i}`}
               onClick={() => handleSelect(opt)}
               disabled={answered}
+              aria-label={`${opt} (option ${i + 1})`}
+              aria-pressed={answered ? selected === opt : undefined}
               className={`p-6 sm:p-8 rounded-2xl transition-all text-center ${
                 showCorrect
                   ? 'bg-primary-fixed border-2 border-primary ring-2 ring-primary/20'

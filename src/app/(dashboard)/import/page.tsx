@@ -12,8 +12,8 @@ interface ParsedCard {
 
 export default function ImportPage() {
   usePageTitle('Import');
-  const { data: decksData } = trpc.getDecks.useQuery();
-  const importCards = trpc.importCards.useMutation();
+  const { data: decksData } = trpc.deck.getDecks.useQuery();
+  const importCards = trpc.import.importCards.useMutation();
   const utils = trpc.useUtils();
 
   const [pasteText, setPasteText] = useState('');
@@ -56,8 +56,8 @@ export default function ImportPage() {
       setImportStatus('success');
       setParsedCards([]);
       setPasteText('');
-      utils.getDecks.invalidate();
-      utils.getDashboardStats.invalidate();
+      utils.deck.getDecks.invalidate();
+      utils.dashboard.getDashboardStats.invalidate();
     } catch {
       setImportStatus('error');
     }

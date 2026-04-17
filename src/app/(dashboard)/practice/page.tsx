@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Component, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, Component, type ReactNode } from 'react';
 import { trpc } from '@/trpc/client';
 import { usePracticeStore } from '@/store/usePracticeStore';
 import { SpeakButton } from '@/components/SpeakButton';
@@ -9,7 +9,11 @@ import { RadicalBreakdown } from '@/components/RadicalBreakdown';
 import { CompoundWords } from '@/components/CompoundWords';
 import { CardReveal } from '@/components/Animations';
 import { AchievementToast, XPPopup } from '@/components/AchievementToast';
+import { ConfirmationChip } from '@/components/MicroInteractions';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOfflineQueue } from '@/hooks/useOfflineQueue';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { useConfetti } from '@/hooks/useConfetti';
 import { calculateReviewXP } from '@/lib/gamification';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -30,16 +34,21 @@ const QUALITY_ACTIONS = [
 
 export default function PracticePage() {
   usePageTitle('Practice');
-  const { data: dueCards, isLoading, refetch } = trpc.getDueCards.useQuery({ limit: 20 });
-  const submitReview = trpc.submitReview.useMutation({ onSuccess: () => refetch() });
-  const recordActivity = trpc.recordStudyActivity.useMutation();
-  const awardXP = trpc.awardXP.useMutation();
-  const updateChallenge = trpc.updateChallengeProgress.useMutation();
+  const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
+  const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
+  const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
+  const awardXP = trpc.gamification.awardXP.useMutation();
+  const updateChallenge = trpc.gamification.updateChallengeProgress.useMutation();
+
+  const { isOnline, pendingCount, enqueue, flush } = useOfflineQueue();
+  const { fire: fireConfetti } = useConfetti();
+  const sessionCompleteFired = useRef(false);
 
   const [xpGained, setXpGained] = useState(0);
   const [showXP, setShowXP] = useState(false);
+  const [streakChip, setStreakChip] = useState<string | null>(null);
   const [newAchievements, setNewAchievements] = useState<string[]>([]);
-  const [reviewStartTime, setReviewStartTime] = useState(Date.now());
+  const [reviewStartTime, setReviewStartTime] = useState(() => Date.now());
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -55,6 +64,12 @@ export default function PracticePage() {
   const card = cards[currentIndex];
   const progress = total > 0 ? Math.round(((mastered + reviewed) / total) * 100) : 0;
 
+  // Clear any stale session state left in sessionStorage from a previous visit
+  useEffect(() => {
+    resetSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Sync card count to store
   useEffect(() => {
     if (total > 0) setCardsRemaining(total - currentIndex);
@@ -62,18 +77,37 @@ export default function PracticePage() {
 
   // Reset timer when card changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReviewStartTime(Date.now());
   }, [currentIndex]);
+
+  // Flush offline queue when we come back online
+  useEffect(() => {
+    if (isOnline && pendingCount > 0) {
+      flush((r) => submitReview.mutateAsync(r));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline]);
 
   const handleAction = useCallback((quality: number) => {
     if (!card) return;
     const responseTimeMs = Date.now() - reviewStartTime;
-    submitReview.mutate({ progressId: card.progressId, quality, responseTimeMs });
+    if (isOnline) {
+      submitReview.mutate({ progressId: card.progressId, quality, responseTimeMs });
+    } else {
+      enqueue({ progressId: card.progressId, quality, responseTimeMs });
+    }
     const isCorrect = quality >= 3;
     if (isCorrect) {
       recordMastered();
       incrementStreak();
       incrementScore();
+      // Streak milestone confetti
+      const newStreak = streak + 1;
+      if (newStreak === 5 || newStreak === 10 || newStreak === 20) {
+        fireConfetti({ y: 0.5, count: 60 });
+        setStreakChip(`${newStreak} streak! 🔥`);
+      }
     } else {
       recordReviewed();
       resetStreak();
@@ -98,7 +132,8 @@ export default function PracticePage() {
 
     setRevealed(false);
     setCurrentIndex(i => i + 1);
-  }, [card, reviewStartTime, submitReview, recordMastered, recordReviewed, incrementStreak, incrementScore, resetStreak, recordActivity, awardXP, updateChallenge, streak]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card, reviewStartTime, submitReview, recordMastered, recordReviewed, incrementStreak, incrementScore, resetStreak, recordActivity, awardXP, updateChallenge, streak, fireConfetti]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -124,7 +159,12 @@ export default function PracticePage() {
     return () => window.removeEventListener('keydown', handler);
   }, [revealed, handleAction]);
 
-  // Session complete
+  // Session complete — fire confetti once
+  if (!isLoading && total > 0 && currentIndex >= total && !sessionCompleteFired.current) {
+    sessionCompleteFired.current = true;
+    setTimeout(() => fireConfetti({ y: 0.4, count: 120 }), 300);
+  }
+
   if (!isLoading && (total === 0 || currentIndex >= total)) {
     return (
       <div className="flex-1 flex flex-col px-4 sm:px-6 py-6 sm:py-8 max-w-5xl mx-auto w-full pb-24 md:pb-8 items-center justify-center">
@@ -311,12 +351,15 @@ export default function PracticePage() {
       {revealed && (
         <CardReveal delay={0.1}>
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <ErrorBoundary><SentenceContext character={card.character} /></ErrorBoundary>
+            <ErrorBoundary><SentenceContext character={card.character} meaning={card.meaning} hskLevel={card.hskLevel} /></ErrorBoundary>
             <ErrorBoundary><RadicalBreakdown character={card.character} /></ErrorBoundary>
             <ErrorBoundary><CompoundWords character={card.character} /></ErrorBoundary>
           </div>
         </CardReveal>
       )}
+
+      {/* Offline status banner */}
+      <OfflineBanner isOnline={isOnline} pendingCount={pendingCount} />
 
       {/* XP Popup */}
       <XPPopup amount={xpGained} show={showXP} />
@@ -328,6 +371,15 @@ export default function PracticePage() {
           onDismiss={() => setNewAchievements([])}
         />
       )}
+
+      {/* Streak milestone chip */}
+      <ConfirmationChip
+        message={streakChip ?? ''}
+        icon="local_fire_department"
+        show={!!streakChip}
+        type="success"
+        onDone={() => setStreakChip(null)}
+      />
 
       {/* Keyboard shortcuts — desktop only */}
       <div className="hidden lg:flex fixed bottom-4 left-1/2 -translate-x-1/2 bg-surface-container-low/90 backdrop-blur-md rounded-full px-6 py-2 shadow-lg shadow-on-surface/5 items-center gap-4 text-[10px] text-on-surface-variant font-medium z-20 border border-outline-variant/20">

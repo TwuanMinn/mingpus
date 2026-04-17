@@ -4,7 +4,9 @@ import { trpc } from '@/trpc/client';
 import { getLevelInfo, xpForLevel, levelProgress } from '@/lib/gamification';
 
 export function XPBar() {
-  const { data: xp } = trpc.getXPStatus.useQuery();
+  const { data: xp } = trpc.gamification.getXPStatus.useQuery(undefined, {
+    staleTime: 2 * 60_000, // XP doesn't change second-to-second; avoid re-fetch on every nav
+  });
 
   if (!xp) return null;
 

@@ -3,7 +3,7 @@
 import { trpc } from '@/trpc/client';
 
 export function DailyChallenges() {
-  const { data: challenges, isLoading } = trpc.getDailyChallenges.useQuery();
+  const { data: challenges, isLoading } = trpc.gamification.getDailyChallenges.useQuery();
 
   if (isLoading) {
     return (

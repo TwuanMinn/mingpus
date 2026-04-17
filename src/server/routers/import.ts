@@ -5,14 +5,20 @@ import { db } from '@/db';
 import { decks, flashcards, userProgress } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
+// Sanitization helpers
+const stripHtml = (s: string) => s.replace(/<[^>]*>/g, '').trim();
+const CJK_REGEX = /[\u4e00-\u9fff\u3400-\u4dbf]/;
+
 export const importRouter = router({
   importCards: protectedProcedure
     .input(z.object({
       deckId: z.number(),
       cards: z.array(z.object({
-        character: z.string().min(1).max(50),
-        pinyin: z.string().min(1).max(200),
-        meaning: z.string().min(1).max(500),
+        character: z.string().min(1).max(10)
+          .refine(s => CJK_REGEX.test(s), { message: 'Must contain CJK characters' })
+          .transform(stripHtml),
+        pinyin: z.string().min(1).max(100).transform(stripHtml),
+        meaning: z.string().min(1).max(500).transform(stripHtml),
         strokes: z.number().optional(),
         hskLevel: z.number().optional(),
       })).max(500),

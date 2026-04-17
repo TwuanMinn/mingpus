@@ -131,9 +131,18 @@ export const CHALLENGE_TEMPLATES: ChallengeDef[] = [
   { type: 'quiz_score',      title: 'Quiz Champion',    description: 'Score {target}+ points in a quiz',         icon: 'quiz',              targetRange: [100, 300], xpReward: 50 },
 ];
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 /** Pick 3 random challenges for today */
 export function generateDailyChallenges(): { type: string; target: number; xpReward: number }[] {
-  const shuffled = [...CHALLENGE_TEMPLATES].sort(() => Math.random() - 0.5);
+  const shuffled = shuffle(CHALLENGE_TEMPLATES);
   return shuffled.slice(0, 3).map(tmpl => {
     const [min, max] = tmpl.targetRange;
     const target = Math.floor(Math.random() * (max - min + 1)) + min;

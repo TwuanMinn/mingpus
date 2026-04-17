@@ -24,11 +24,11 @@ function StatSkeleton() {
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
-  const { data: stats, isLoading: statsLoading } = trpc.getDashboardStats.useQuery();
-  const { data: dueCards, isLoading: cardsLoading } = trpc.getDueCards.useQuery({ limit: 3 });
-  const { data: streak } = trpc.getStudyStreak.useQuery();
-  const { data: recentDecks, isLoading: decksLoading } = trpc.getRecentDecks.useQuery();
-  const { data: xpStatus } = trpc.getXPStatus.useQuery();
+  const { data: stats, isLoading: statsLoading } = trpc.dashboard.getDashboardStats.useQuery();
+  const { data: dueCards, isLoading: cardsLoading } = trpc.practice.getDueCards.useQuery({ limit: 3 });
+  const { data: streak } = trpc.dashboard.getStudyStreak.useQuery();
+  const { data: recentDecks, isLoading: decksLoading } = trpc.dashboard.getRecentDecks.useQuery();
+  const { data: xpStatus } = trpc.gamification.getXPStatus.useQuery();
 
   const totalCards = stats?.totalCards ?? 0;
   const dueCount = stats?.dueForReview ?? 0;
@@ -51,7 +51,7 @@ export default function Dashboard() {
     localStorage.setItem(DAILY_GOAL_KEY, String(clamped));
     setShowGoalEdit(false);
   };
-  const todayReviewed = Math.max(0, totalCards - dueCount);
+  const todayReviewed = stats?.todayReviewed ?? 0;
   const goalProgress = dailyGoal > 0 ? Math.min(100, Math.round((todayReviewed / dailyGoal) * 100)) : 0;
 
   return (

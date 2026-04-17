@@ -96,4 +96,74 @@ export const analyticsRouter = router({
       .orderBy(desc(reviewLogs.createdAt))
       .limit(50);
   }),
+
+  /** HSK progress: learned and mastered counts per HSK level */
+  getHSKProgress: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    // Count cards per HSK level, with mastery status
+    const results = await db
+      .select({
+        hskLevel: flashcards.hskLevel,
+        total: count(),
+        mastered: sql<number>`SUM(CASE WHEN ${userProgress.repetition} >= 3 THEN 1 ELSE 0 END)`,
+      })
+      .from(flashcards)
+      .innerJoin(decks, eq(flashcards.deckId, decks.id))
+      .leftJoin(
+        userProgress,
+        and(
+          eq(userProgress.flashcardId, flashcards.id),
+          eq(userProgress.userId, userId),
+        ),
+      )
+      .where(eq(decks.userId, userId))
+      .groupBy(flashcards.hskLevel);
+
+    return results.map(r => ({
+      hskLevel: r.hskLevel ?? 0,
+      learned: r.total,
+      mastered: r.mastered ?? 0,
+    }));
+  }),
+
+  /** Weekly accuracy trend for chart */
+  getWeeklyAccuracy: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const sessions = await db
+      .select({
+        date: studySessions.date,
+        cardsReviewed: studySessions.cardsReviewed,
+        cardsCorrect: studySessions.cardsCorrect,
+      })
+      .from(studySessions)
+      .where(eq(studySessions.userId, userId))
+      .orderBy(desc(studySessions.date))
+      .limit(56); // 8 weeks
+
+    // Group by week
+    const weeks: Map<string, { reviewed: number; correct: number }> = new Map();
+    for (const s of sessions) {
+      const d = new Date(s.date);
+      // Get ISO week start (Monday)
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const weekStart = new Date(d.setDate(diff)).toISOString().slice(0, 10);
+
+      const existing = weeks.get(weekStart) ?? { reviewed: 0, correct: 0 };
+      existing.reviewed += s.cardsReviewed;
+      existing.correct += s.cardsCorrect;
+      weeks.set(weekStart, existing);
+    }
+
+    return Array.from(weeks.entries())
+      .map(([week, data]) => ({
+        week,
+        accuracy: data.reviewed > 0 ? Math.round((data.correct / data.reviewed) * 100) : 0,
+        reviewed: data.reviewed,
+      }))
+      .sort((a, b) => a.week.localeCompare(b.week))
+      .slice(-8); // last 8 weeks
+  }),
 });

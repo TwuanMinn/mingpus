@@ -8,6 +8,11 @@ import type HanziWriterType from 'hanzi-writer';
 
 type StrokeMode = 'animate' | 'quiz';
 
+/** Returns true if the string contains at least one CJK character */
+function isChinese(str: string): boolean {
+  return /[\u4e00-\u9fff\u3400-\u4dbf\u{20000}-\u{2a6df}\u{2a700}-\u{2ebef}\uf900-\ufaff]/u.test(str);
+}
+
 const PRESET_CHARS = [
   { char: '永', name: 'Yǒng', meaning: 'Eternity' },
   { char: '人', name: 'Rén', meaning: 'Person' },
@@ -29,8 +34,8 @@ export default function StrokesPage() {
   const [customChar, setCustomChar] = useState('');
   const [writerReady, setWriterReady] = useState(false);
 
-  const { data: decksData } = trpc.getDecks.useQuery();
-  const { data: cards } = trpc.getCardsForDeck.useQuery(
+  const { data: decksData } = trpc.deck.getDecks.useQuery();
+  const { data: cards } = trpc.flashcard.getCardsForDeck.useQuery(
     { deckId: decksData?.[0]?.id ?? 0 },
     { enabled: !!decksData?.[0]?.id }
   );
@@ -56,7 +61,7 @@ export default function StrokesPage() {
   const initWriter = useCallback(async (char: string, writerMode: StrokeMode) => {
     // Clean up previous writer
     if (writerRef.current) {
-      writerRef.current.hideCharacter();
+      try { writerRef.current.hideCharacter(); } catch {}
       writerRef.current = null;
     }
     if (containerRef.current) {
@@ -64,6 +69,16 @@ export default function StrokesPage() {
     }
 
     if (!containerRef.current) return;
+
+    // Guard: only allow actual Chinese characters
+    if (!isChinese(char)) {
+      containerRef.current.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-on-surface-variant">
+        <span class="material-symbols-outlined text-5xl text-outline mb-4">translate</span>
+        <p class="text-sm font-medium">"${char}" is not a Chinese character</p>
+        <p class="text-xs text-outline mt-1">Enter a Chinese character to practice strokes</p>
+      </div>`;
+      return;
+    }
 
     const size = Math.min(containerRef.current.clientWidth, containerRef.current.clientHeight, 400);
 
@@ -95,7 +110,7 @@ export default function StrokesPage() {
       } else {
         setQuizResult(null);
         let correct = 0;
-        let total = 0;
+        const total = 0;
 
         let strokeCount = 0;
 
@@ -136,7 +151,7 @@ export default function StrokesPage() {
     initWriter(selectedChar, mode);
     return () => {
       if (writerRef.current) {
-        writerRef.current.hideCharacter();
+        try { writerRef.current.hideCharacter(); } catch {}
         writerRef.current = null;
       }
     };
@@ -155,8 +170,15 @@ export default function StrokesPage() {
   };
 
   const handleCustomChar = () => {
-    if (customChar.trim()) {
-      setSelectedChar(customChar.trim()[0]); // Take first character
+    const trimmed = customChar.trim();
+    if (trimmed) {
+      const firstChar = trimmed[0];
+      if (isChinese(firstChar)) {
+        setSelectedChar(firstChar);
+      } else {
+        // Still set it — initWriter will show an appropriate error message
+        setSelectedChar(firstChar);
+      }
       setCustomChar('');
     }
   };

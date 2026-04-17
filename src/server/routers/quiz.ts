@@ -5,6 +5,15 @@ import { db } from '@/db';
 import { decks, flashcards } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export const quizRouter = router({
   getQuizQuestions: protectedProcedure
     .input(z.object({
@@ -27,19 +36,17 @@ export const quizRouter = router({
         .innerJoin(decks, eq(flashcards.deckId, decks.id))
         .where(and(...conditions));
 
-      const shuffled = allCards.sort(() => Math.random() - 0.5);
+      const shuffled = shuffle(allCards);
       const questions = shuffled.slice(0, input.count);
 
       // SECURITY FIX: Don't send correctAnswer to the client.
       // Instead, let the client use submitQuizAnswer for validation.
       return questions.map(q => {
-        const distractors = allCards
-          .filter(c => c.id !== q.id)
-          .sort(() => Math.random() - 0.5)
+        const distractors = shuffle(allCards.filter(c => c.id !== q.id))
           .slice(0, 3)
           .map(c => c.meaning);
 
-        const options = [...distractors, q.meaning].sort(() => Math.random() - 0.5);
+        const options = shuffle([...distractors, q.meaning]);
 
         return {
           id: q.id,

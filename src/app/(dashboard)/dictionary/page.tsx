@@ -33,6 +33,18 @@ export default function DictionaryPage() {
   const [hskFilter, setHskFilter] = useState<number | undefined>(undefined);
   const [searchHistory, setSearchHistory] = useState<HistoryEntry[]>([]);
   const [addingToStudy, setAddingToStudy] = useState<string | null>(null);
+  const [direction, setDirection] = useState<'en-zh' | 'zh-en'>('en-zh');
+  const [swapRotation, setSwapRotation] = useState(0);
+
+  const isEnToZh = direction === 'en-zh';
+  const leftLabel = isEnToZh ? 'English' : 'Mandarin';
+  const rightLabel = isEnToZh ? 'Mandarin' : 'English';
+
+  const handleSwapDirection = () => {
+    setDirection(prev => prev === 'en-zh' ? 'zh-en' : 'en-zh');
+    setSwapRotation(prev => prev + 180);
+    setQuery('');
+  };
 
   // Sync URL query param
   useEffect(() => {
@@ -45,11 +57,11 @@ export default function DictionaryPage() {
     setSearchHistory(loadHistory());
   }, []);
 
-  const { data: decksData } = trpc.getDecks.useQuery();
-  const addCard = trpc.addCard.useMutation();
+  const { data: decksData } = trpc.deck.getDecks.useQuery();
+  const addCard = trpc.flashcard.addCard.useMutation();
   const utils = trpc.useUtils();
 
-  const { data: results, isLoading } = trpc.searchCharacters.useQuery(
+  const { data: results, isLoading } = trpc.dictionary.searchCharacters.useQuery(
     { query, hskLevel: hskFilter },
     { enabled: query.length > 0 }
   );
@@ -98,11 +110,19 @@ export default function DictionaryPage() {
             <div className="bg-surface-container-lowest rounded-2xl sm:rounded-[1.5rem] shadow-[0_32px_64px_-4px_rgba(27,27,35,0.06)] overflow-hidden">
               {/* Language Toggle Bar */}
               <div className="flex items-center justify-center gap-4 sm:gap-8 py-3 sm:py-4 bg-surface-container-low">
-                <span className="text-sm font-bold text-on-surface font-[family-name:var(--font-jakarta)]">English</span>
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
-                  <span className="material-symbols-outlined text-[20px] sm:text-[24px]">swap_horiz</span>
-                </div>
-                <span className="text-sm font-bold text-on-surface font-[family-name:var(--font-jakarta)]">Mandarin</span>
+                <span className="text-sm font-bold text-on-surface font-[family-name:var(--font-jakarta)] min-w-[4.5rem] text-right">{leftLabel}</span>
+                <button
+                  onClick={handleSwapDirection}
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20 cursor-pointer hover:scale-110 active:scale-95 transition-transform"
+                  aria-label="Swap translation direction"
+                  title="Swap direction"
+                >
+                  <span
+                    className="material-symbols-outlined text-[20px] sm:text-[24px] transition-transform duration-300"
+                    style={{ transform: `rotate(${swapRotation}deg)` }}
+                  >swap_horiz</span>
+                </button>
+                <span className="text-sm font-bold text-on-surface font-[family-name:var(--font-jakarta)] min-w-[4.5rem] text-left">{rightLabel}</span>
               </div>
 
               {/* Input/Output Grids */}
@@ -113,7 +133,7 @@ export default function DictionaryPage() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     className="w-full h-36 sm:h-48 bg-transparent border-none focus:ring-0 text-lg sm:text-xl font-medium text-on-background placeholder-outline/50 resize-none outline-none"
-                    placeholder="Enter Chinese or English"
+                    placeholder={isEnToZh ? 'Enter English word or phrase' : 'Enter Chinese character or pinyin'}
                   ></textarea>
                   <div className="flex justify-between items-center mt-3 sm:mt-4">
                     <span className="text-xs text-outline font-medium">{query.length} / 500</span>
@@ -131,14 +151,25 @@ export default function DictionaryPage() {
                         <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin"></div>
                       </div>
                     ) : selectedResult ? (
-                      <>
-                        <p className="text-3xl sm:text-4xl chinese-char text-primary font-bold mb-2 tracking-wide leading-relaxed">{selectedResult.character}</p>
-                        <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                          <p className="text-base sm:text-lg text-secondary font-medium tracking-widest">{selectedResult.pinyin}</p>
-                          <SpeakButton text={selectedResult.character} size="sm" />
-                        </div>
-                        <p className="text-on-surface-variant leading-relaxed text-sm sm:text-base">{selectedResult.meaning}</p>
-                      </>
+                      isEnToZh ? (
+                        <>
+                          <p className="text-3xl sm:text-4xl chinese-char text-primary font-bold mb-2 tracking-wide leading-relaxed">{selectedResult.character}</p>
+                          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                            <p className="text-base sm:text-lg text-secondary font-medium tracking-widest">{selectedResult.pinyin}</p>
+                            <SpeakButton text={selectedResult.character} size="sm" />
+                          </div>
+                          <p className="text-on-surface-variant leading-relaxed text-sm sm:text-base">{selectedResult.meaning}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xl sm:text-2xl font-bold text-primary mb-2 leading-relaxed">{selectedResult.meaning}</p>
+                          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                            <p className="text-2xl sm:text-3xl chinese-char text-on-surface font-medium">{selectedResult.character}</p>
+                            <SpeakButton text={selectedResult.character} size="sm" />
+                          </div>
+                          <p className="text-on-surface-variant leading-relaxed text-sm sm:text-base tracking-widest">{selectedResult.pinyin}</p>
+                        </>
+                      )
                     ) : query.length > 0 ? (
                       <p className="text-on-surface-variant text-sm py-4">No results found</p>
                     ) : (
@@ -159,11 +190,14 @@ export default function DictionaryPage() {
               {/* Action Bar */}
               {selectedResult && (
                 <div className="px-5 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-surface-container-low/50">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {selectedResult.hskLevel && (
                       <span className="bg-primary/10 text-primary text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">HSK {selectedResult.hskLevel}</span>
                     )}
                     <span className="bg-secondary/10 text-secondary text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">{selectedResult.deckTitle}</span>
+                    {(selectedResult as Record<string, unknown>).source === 'dictionary' && (
+                      <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Built-in</span>
+                    )}
                   </div>
                   <button onClick={async () => {
                     if (!decksData?.length || addingToStudy) return;
@@ -177,8 +211,8 @@ export default function DictionaryPage() {
                         hskLevel: selectedResult.hskLevel ?? undefined,
                       });
                       addToHistory(selectedResult.character, selectedResult.pinyin, selectedResult.meaning);
-                      utils.getDecks.invalidate();
-                      utils.getDashboardStats.invalidate();
+                      utils.deck.getDecks.invalidate();
+                      utils.dashboard.getDashboardStats.invalidate();
                     } catch {} finally {
                       setAddingToStudy(null);
                     }
@@ -213,9 +247,14 @@ export default function DictionaryPage() {
                       <p className="text-sm sm:text-base font-medium text-secondary">{r.pinyin}</p>
                       <p className="text-xs sm:text-sm text-on-surface-variant truncate">{r.meaning}</p>
                     </div>
-                    {r.hskLevel && (
-                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">HSK {r.hskLevel}</span>
-                    )}
+                    <div className="flex gap-1.5 items-center shrink-0">
+                      {r.hskLevel && (
+                        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">HSK {r.hskLevel}</span>
+                      )}
+                      {(r as Record<string, unknown>).source === 'dictionary' && (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">Dict</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )) : query.length > 0 && !isLoading ? (

@@ -18,7 +18,7 @@ const POSITION_LABELS: Record<string, string> = {
 };
 
 export function RadicalBreakdown({ character, className = '' }: RadicalBreakdownProps) {
-  const { data, isLoading } = trpc.getRadicals.useQuery(
+  const { data, isLoading } = trpc.features.getRadicals.useQuery(
     { character },
     { enabled: !!character }
   );

@@ -4,7 +4,7 @@ import { trpc } from '@/trpc/client';
 import { SpeakButton } from './SpeakButton';
 
 export function CompoundWords({ character }: { character: string }) {
-  const { data: words, isLoading } = trpc.getCompoundWords.useQuery({ character });
+  const { data: words, isLoading } = trpc.gamification.getCompoundWords.useQuery({ character });
 
   if (isLoading) {
     return (

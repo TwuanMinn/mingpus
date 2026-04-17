@@ -7,8 +7,10 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function QuizPage() {
   usePageTitle('Quiz');
-  const { data: questions, isLoading, refetch } = trpc.getQuizQuestions.useQuery({ count: 10 });
-  const submitAnswer = trpc.submitQuizAnswer.useMutation();
+  const { data: questions, isLoading, refetch } = trpc.quiz.getQuizQuestions.useQuery({ count: 10 });
+  const submitAnswer = trpc.quiz.submitQuizAnswer.useMutation();
+  const awardXP = trpc.gamification.awardXP.useMutation();
+  const updateChallenge = trpc.gamification.updateChallengeProgress.useMutation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
@@ -102,18 +104,27 @@ export default function QuizPage() {
   const [historySaved, setHistorySaved] = useState(false);
   const [history, setHistory] = useState(getHistory);
 
-  if (quizDone && total > 0 && !historySaved) {
-    const entry = {
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      score,
-      correct: Math.round(score / 50),
-      total,
-    };
-    const updated = [entry, ...getHistory()].slice(0, 10);
-    localStorage.setItem('dc-quiz-history', JSON.stringify(updated));
-    setHistory(updated);
-    setHistorySaved(true);
-  }
+  useEffect(() => {
+    if (quizDone && total > 0 && !historySaved) {
+      const entry = {
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        score,
+        correct: Math.round(score / 50),
+        total,
+      };
+      const updated = [entry, ...getHistory()].slice(0, 10);
+      localStorage.setItem('dc-quiz-history', JSON.stringify(updated));
+      setHistory(updated);
+      setHistorySaved(true);
+
+      // Integrate with gamification backend (#11)
+      if (score > 0) {
+        awardXP.mutate({ xpAmount: score, source: 'quiz' });
+      }
+      updateChallenge.mutate({ challengeType: 'quiz_score', increment: score });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizDone, total, historySaved, score]);
 
   // Results screen
   if (quizDone) {

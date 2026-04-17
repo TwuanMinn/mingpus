@@ -83,13 +83,17 @@ db.exec(`
 
   CREATE TABLE "user_progress" (
     "id" integer PRIMARY KEY AUTOINCREMENT,
-    "user_id" text NOT NULL REFERENCES "user"("id"),
-    "flashcard_id" integer NOT NULL REFERENCES "flashcards"("id"),
+    "user_id" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+    "flashcard_id" integer NOT NULL REFERENCES "flashcards"("id") ON DELETE CASCADE,
     "interval" integer DEFAULT 0 NOT NULL,
     "repetition" integer DEFAULT 0 NOT NULL,
     "efactor" integer DEFAULT 2500 NOT NULL,
     "due_date" integer NOT NULL
   );
+  CREATE INDEX "progress_userId_idx" ON "user_progress"("user_id");
+  CREATE INDEX "progress_dueDate_idx" ON "user_progress"("user_id", "due_date");
+  CREATE INDEX "progress_flashcardId_idx" ON "user_progress"("flashcard_id");
+  CREATE UNIQUE INDEX "progress_userId_flashcardId_unq" ON "user_progress"("user_id", "flashcard_id");
 `);
 
 console.log('✅ Database recreated with snake_case columns at:', dbPath);

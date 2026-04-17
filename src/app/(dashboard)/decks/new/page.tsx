@@ -54,7 +54,6 @@ export default function NewDeckPage() {
   };
 
   const onSubmit = (data: DeckDetails) => {
-    console.log("Saving deck:", data, "with cards:", cards);
     // Ideally mutation.mutate({ ...data, cards })
     alert("Deck Saved successfully! Redirecting...");
   };

@@ -3,7 +3,7 @@
 import { trpc } from '@/trpc/client';
 
 export function LevelBadge({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const { data: xp } = trpc.getXPStatus.useQuery();
+  const { data: xp } = trpc.gamification.getXPStatus.useQuery();
 
   if (!xp) return null;
 

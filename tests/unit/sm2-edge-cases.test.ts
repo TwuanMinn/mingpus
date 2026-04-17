@@ -68,7 +68,7 @@ describe('SM-2 Algorithm — Edge Cases & Stress', () => {
 
     it('resets to 1 after a failure mid-streak', () => {
       // Build up a streak
-      let state = { quality: 5, repetition: 5, interval: 60, efactor: 2600 };
+      const state = { quality: 5, repetition: 5, interval: 60, efactor: 2600 };
       const result = sm2({ ...state, quality: 1 });
       expect(result.interval).toBe(1);
       expect(result.repetition).toBe(0);

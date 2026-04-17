@@ -4,7 +4,7 @@ import { trpc } from '@/trpc/client';
 import { useState } from 'react';
 
 export function ForecastChart() {
-  const { data: forecast, isLoading } = trpc.getForecast.useQuery();
+  const { data: forecast, isLoading } = trpc.features.getForecast.useQuery();
 
   if (isLoading) {
     return <div className="h-48 bg-surface-container-high rounded-xl animate-pulse" />;

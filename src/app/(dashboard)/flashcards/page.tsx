@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { trpc } from '@/trpc/client';
 import { Flashcard } from '@/components/Flashcard';
 import { SpeakButton } from '@/components/SpeakButton';
@@ -9,9 +9,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function FlashcardsPage() {
   usePageTitle('Flashcards');
-  const { data: decksData } = trpc.getDecks.useQuery();
+  const { data: decksData } = trpc.deck.getDecks.useQuery();
   const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
-  const { data: cards } = trpc.getCardsForDeck.useQuery(
+  const { data: cards } = trpc.flashcard.getCardsForDeck.useQuery(
     { deckId: selectedDeckId! },
     { enabled: !!selectedDeckId }
   );
@@ -37,13 +37,13 @@ export default function FlashcardsPage() {
     }, 200);
   };
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setCurrentIndex(i => Math.min(total - 1, i + 1));
-  };
+  }, [total]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     setCurrentIndex(i => Math.max(0, i - 1));
-  };
+  }, []);
 
   // Keyboard navigation: arrow keys for prev/next
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function FlashcardsPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [handleNext, handlePrev]);
 
   // Deck selector
   if (!selectedDeckId) {

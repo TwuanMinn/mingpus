@@ -11,11 +11,11 @@ import Link from 'next/link';
  */
 export default function ListeningPracticePage() {
   usePageTitle('Listening Practice');
-  const { data: dueCards, isLoading, refetch } = trpc.getDueCards.useQuery({ limit: 20 });
-  const submitReview = trpc.submitReview.useMutation({ onSuccess: () => refetch() });
-  const recordActivity = trpc.recordStudyActivity.useMutation();
-  const awardXP = trpc.awardXP.useMutation();
-  const updateChallenge = trpc.updateChallengeProgress.useMutation();
+  const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
+  const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
+  const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
+  const awardXP = trpc.gamification.awardXP.useMutation();
+  const updateChallenge = trpc.gamification.updateChallengeProgress.useMutation();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [options, setOptions] = useState<{ character: string; meaning: string }[]>([]);
@@ -41,9 +41,21 @@ export default function ListeningPracticePage() {
 
     const opts = [...distractors, { character: card.character, meaning: card.meaning }]
       .sort(() => Math.random() - 0.5);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOptions(opts);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasPlayed(false);
   }, [card, cards]);
+
+  const speak = useCallback((text: string) => {
+    if (typeof window === 'undefined') return;
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 0.8;
+    synth.speak(utterance);
+  }, []);
 
   // Auto-play pronunciation for each new card
   useEffect(() => {
@@ -53,17 +65,7 @@ export default function ListeningPracticePage() {
       setHasPlayed(true);
     }, 500);
     return () => clearTimeout(timer);
-  }, [card, hasPlayed]);
-
-  const speak = (text: string) => {
-    if (typeof window === 'undefined') return;
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'zh-CN';
-    utterance.rate = 0.8;
-    synth.speak(utterance);
-  };
+  }, [card, hasPlayed, speak]);
 
   const handleSelect = useCallback((char: string) => {
     if (answered || !card) return;
@@ -114,7 +116,7 @@ export default function ListeningPracticePage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [answered, options, card, handleSelect, handleNext]);
+  }, [answered, options, card, handleSelect, handleNext, speak]);
 
   // Session complete
   if (!isLoading && (total === 0 || currentIndex >= total)) {
@@ -155,8 +157,8 @@ export default function ListeningPracticePage() {
 
   if (isLoading || !card) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      <div className="flex-1 flex items-center justify-center" role="status" aria-label="Loading practice cards">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -223,6 +225,8 @@ export default function ListeningPracticePage() {
               key={`${opt.character}-${i}`}
               onClick={() => handleSelect(opt.character)}
               disabled={answered}
+              aria-label={`${opt.character}, ${opt.meaning} (option ${i + 1})`}
+              aria-pressed={answered ? selected === opt.character : undefined}
               className={`p-5 sm:p-6 rounded-2xl transition-all text-center ${
                 showCorrect
                   ? 'bg-primary-fixed border-2 border-primary ring-2 ring-primary/20'

@@ -11,7 +11,7 @@ const MASTERY_CONFIG = {
 } as const;
 
 export function MasteryMap() {
-  const { data, isLoading } = trpc.getMasteryMap.useQuery();
+  const { data, isLoading } = trpc.features.getMasteryMap.useQuery();
 
   type MasteryItem = NonNullable<typeof data>[number];
   const [hskFilter, setHskFilter] = useState<number | undefined>(undefined);

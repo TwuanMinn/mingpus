@@ -8,9 +8,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function DecksPage() {
   usePageTitle('Decks');
-  const { data: deckList, isLoading, refetch } = trpc.getDecks.useQuery();
-  const createDeck = trpc.createDeck.useMutation({ onSuccess: () => { refetch(); setShowCreate(false); setNewTitle(''); } });
-  const deleteDeck = trpc.deleteDeck.useMutation({ onSuccess: () => refetch() });
+  const { data: deckList, isLoading, refetch } = trpc.deck.getDecks.useQuery();
+  const createDeck = trpc.deck.createDeck.useMutation({ onSuccess: () => { refetch(); setShowCreate(false); setNewTitle(''); } });
+  const deleteDeck = trpc.deck.deleteDeck.useMutation({ onSuccess: () => refetch() });
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -55,7 +55,7 @@ export default function DecksPage() {
       {/* Deck Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
-          {[1, 2, 3].map(i => <div key={i} className="h-48 bg-surface-container-low rounded-2xl" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-48 bg-surface-container-high rounded-2xl" />)}
         </div>
       ) : !deckList?.length ? (
         <div className="text-center py-20">

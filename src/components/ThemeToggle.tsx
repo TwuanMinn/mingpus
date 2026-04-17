@@ -1,23 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useThemeStore } from '@/store/useThemeStore';
+import { useAppearanceStore } from '@/store/useAppearanceStore';
 
 export function ThemeToggle({ className = '' }: { className?: string }) {
-  const { theme, toggle, _hydrated, _hydrate } = useThemeStore();
-  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme, _hydrated } = useAppearanceStore();
 
-  useEffect(() => {
-    if (!_hydrated) _hydrate();
-    setMounted(true);
-  }, [_hydrated, _hydrate]);
+  const isDark  = theme !== 'light-jade' && theme !== 'light-classic';
+  const label   = _hydrated ? `Switch to ${isDark ? 'light' : 'dark'} mode` : 'Toggle theme';
+  const icon    = _hydrated ? (isDark ? 'light_mode' : 'dark_mode') : 'dark_mode';
 
-  const label = mounted
-    ? `Switch to ${theme === 'light' ? 'dark' : 'light'} mode`
-    : 'Toggle theme';
-  const icon = mounted
-    ? (theme === 'light' ? 'dark_mode' : 'light_mode')
-    : 'dark_mode';
+  const toggle = () => {
+    // Toggle between Dark Cosmos ↔ Light Jade (the canonical dark/light pair)
+    if (theme === 'light-jade') {
+      setTheme('dark-cosmos');
+    } else {
+      setTheme('light-jade');
+    }
+  };
 
   return (
     <button

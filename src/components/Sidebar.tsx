@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { XPBar } from './XPBar';
@@ -168,11 +169,9 @@ interface UserInfo {
 const navItems = [
   { href: "/", icon: "dashboard", label: "Dashboard" },
   { href: "/practice", icon: "auto_stories", label: "Practice" },
-  { href: "/flashcards", icon: "style", label: "Flashcards" },
-  { href: "/decks", icon: "collections_bookmark", label: "Decks" },
+  { href: "/study", icon: "school", label: "Study" },
   { href: "/discover", icon: "explore", label: "Discover" },
   { href: "/dictionary", icon: "translate", label: "Dictionary" },
-  { href: "/quiz", icon: "quiz", label: "Quiz" },
   { href: "/import", icon: "library_add", label: "Import" },
   { href: "/strokes", icon: "draw", label: "Strokes" },
   { href: "/analytics", icon: "insights", label: "Analytics" },
@@ -185,7 +184,13 @@ export function Sidebar({ user }: { user: UserInfo }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutOverlay, setShowLogoutOverlay] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Defer layoutId animations to avoid SSR/CSR hydration mismatch
+  useEffect(() => { setMounted(true); }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -205,6 +210,53 @@ export function Sidebar({ user }: { user: UserInfo }) {
     setProfileOpen(false);
   }, [pathname]);
 
+  // Focus first menuitem when dropdown opens; restore focus to trigger when it closes
+  useEffect(() => {
+    if (profileOpen) {
+      const first = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+      first?.focus();
+    } else if (mounted) {
+      // Only restore focus on subsequent closes, not initial render
+      triggerRef.current?.focus({ preventScroll: true });
+    }
+  }, [profileOpen, mounted]);
+
+  // Keyboard navigation inside the open menu (Arrow keys, Home/End, Esc)
+  const onMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
+    if (!items || items.length === 0) return;
+
+    const list = Array.from(items);
+    const activeIndex = list.indexOf(document.activeElement as HTMLElement);
+
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault();
+        setProfileOpen(false);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        list[(activeIndex + 1) % list.length].focus();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        list[(activeIndex - 1 + list.length) % list.length].focus();
+        break;
+      case 'Home':
+        e.preventDefault();
+        list[0].focus();
+        break;
+      case 'End':
+        e.preventDefault();
+        list[list.length - 1].focus();
+        break;
+      case 'Tab':
+        // Let Tab close the menu so focus moves naturally to next page element
+        setProfileOpen(false);
+        break;
+    }
+  };
+
   const handleSignOut = async () => {
     if (loggingOut) return;
     setProfileOpen(false);
@@ -219,7 +271,7 @@ export function Sidebar({ user }: { user: UserInfo }) {
     <aside 
       suppressHydrationWarning
       className={cn(
-        "hidden md:flex flex-col h-screen p-4 border-r bg-background font-[family-name:var(--font-jakarta)] tracking-tight transition-all duration-300 sticky top-0 z-50",
+        "hidden md:flex flex-col h-screen p-4 border-r bg-background font-(family-name:--font-jakarta) tracking-tight transition-all duration-300 sticky top-0 z-50",
         isCollapsed ? "w-20" : "w-64"
       )}
     >
@@ -228,23 +280,28 @@ export function Sidebar({ user }: { user: UserInfo }) {
         <div ref={dropdownRef} className={cn("relative", isCollapsed ? 'hidden' : 'flex-1')}>
           {/* Profile trigger */}
           <button
+            ref={triggerRef}
             onClick={() => setProfileOpen(!profileOpen)}
+            aria-haspopup="menu"
+            aria-expanded={profileOpen}
+            aria-controls="sidebar-profile-menu"
             className="flex items-center gap-3 w-full hover:bg-surface-container-low rounded-xl px-2 py-1.5 transition-colors group"
           >
-            <div className="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary-fixed flex-shrink-0 flex items-center justify-center">
+            <div className="relative w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary-fixed shrink-0 flex items-center justify-center">
               {user.image ? (
-                <img alt={user.name} src={user.image} className="w-full h-full object-cover" />
+                <Image alt={user.name} src={user.image} fill sizes="32px" className="object-cover" />
               ) : (
                 <span className="text-xs font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>
               )}
             </div>
             <div className="min-w-0 flex-1 text-left">
-              <h1 className="text-sm font-bold text-primary truncate">{user.name}</h1>
+              <p className="text-sm font-bold text-primary truncate">{user.name}</p>
             </div>
             <motion.span
               animate={{ rotate: profileOpen ? 180 : 0 }}
               transition={{ duration: 0.2 }}
               className="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-primary"
+              aria-hidden="true"
             >
               expand_more
             </motion.span>
@@ -254,11 +311,16 @@ export function Sidebar({ user }: { user: UserInfo }) {
           <AnimatePresence>
             {profileOpen && (
               <motion.div
+                ref={menuRef}
+                id="sidebar-profile-menu"
+                role="menu"
+                aria-label="Account menu"
+                onKeyDown={onMenuKeyDown}
                 initial={{ opacity: 0, y: -8, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.95 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="absolute top-full left-0 right-0 mt-1.5 z-[60] bg-surface-container border border-outline-variant/20 rounded-xl shadow-xl shadow-black/20 overflow-hidden"
+                className="absolute top-full left-0 right-0 mt-1.5 z-60 bg-surface-container border border-outline-variant/20 rounded-xl shadow-xl shadow-black/20 overflow-hidden focus:outline-none"
               >
                 {/* User info header */}
                 <div className="px-4 py-3 border-b border-outline-variant/15">
@@ -270,15 +332,16 @@ export function Sidebar({ user }: { user: UserInfo }) {
                 <div className="py-1.5">
                   <Link
                     href="/settings"
-                    className="flex items-center gap-3 px-4 py-2 text-[13px] text-on-surface-variant hover:text-primary hover:bg-primary-fixed/50 transition-colors"
+                    role="menuitem"
+                    className="flex items-center gap-3 px-4 py-2 text-[13px] text-on-surface-variant hover:text-primary hover:bg-primary-fixed/50 focus:bg-primary-fixed/50 focus:outline-none transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[18px]">settings</span>
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">settings</span>
                     <span className="font-medium">Settings</span>
                   </Link>
 
                   <div className="flex items-center justify-between px-4 py-2 text-[13px] text-on-surface-variant">
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-[18px]">dark_mode</span>
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">dark_mode</span>
                       <span className="font-medium">Theme</span>
                     </div>
                     <ThemeToggle />
@@ -289,12 +352,13 @@ export function Sidebar({ user }: { user: UserInfo }) {
                   <button
                     onClick={handleSignOut}
                     disabled={loggingOut}
-                    className="flex items-center gap-3 px-4 py-2 w-full text-[13px] text-error hover:bg-error-container/30 transition-colors disabled:opacity-60"
+                    role="menuitem"
+                    className="flex items-center gap-3 px-4 py-2 w-full text-[13px] text-error hover:bg-error-container/30 focus:bg-error-container/30 focus:outline-none transition-colors disabled:opacity-60"
                   >
                     {loggingOut ? (
-                      <span className="w-[18px] h-[18px] border-2 border-error/30 border-t-error rounded-full animate-spin flex-shrink-0" />
+                      <span className="w-[18px] h-[18px] border-2 border-error/30 border-t-error rounded-full animate-spin shrink-0" aria-hidden="true" />
                     ) : (
-                      <span className="material-symbols-outlined text-[18px]">logout</span>
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>
                     )}
                     <span className="font-medium">{loggingOut ? 'Signing out…' : 'Logout'}</span>
                   </button>
@@ -309,12 +373,12 @@ export function Sidebar({ user }: { user: UserInfo }) {
           <div ref={isCollapsed ? dropdownRef : undefined} className="relative mx-auto">
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className="w-9 h-9 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary-fixed flex items-center justify-center hover:ring-2 hover:ring-primary/30 transition-all"
+              className="relative w-9 h-9 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary-fixed flex items-center justify-center hover:ring-2 hover:ring-primary/30 transition-all"
               aria-haspopup="true"
               aria-expanded={profileOpen}
             >
               {user.image ? (
-                <img alt={user.name} src={user.image} className="w-full h-full object-cover" />
+                <Image alt={user.name} src={user.image} fill sizes="36px" className="object-cover" />
               ) : (
                 <span className="text-xs font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>
               )}
@@ -327,7 +391,7 @@ export function Sidebar({ user }: { user: UserInfo }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -8, scale: 0.95 }}
                   transition={{ duration: 0.15, ease: 'easeOut' }}
-                  className="absolute top-full left-0 mt-1.5 z-[60] w-52 bg-surface-container border border-outline-variant/20 rounded-xl shadow-xl shadow-black/20 overflow-hidden"
+                  className="absolute top-full left-0 mt-1.5 z-60 w-52 bg-surface-container border border-outline-variant/20 rounded-xl shadow-xl shadow-black/20 overflow-hidden"
                 >
                   <div className="px-4 py-3 border-b border-outline-variant/15">
                     <p className="text-xs font-bold text-on-surface truncate">{user.name}</p>
@@ -352,7 +416,7 @@ export function Sidebar({ user }: { user: UserInfo }) {
                       className="flex items-center gap-3 px-4 py-2 w-full text-[13px] text-error hover:bg-error-container/30 transition-colors disabled:opacity-60"
                     >
                       {loggingOut ? (
-                        <span className="w-[18px] h-[18px] border-2 border-error/30 border-t-error rounded-full animate-spin flex-shrink-0" />
+                        <span className="w-[18px] h-[18px] border-2 border-error/30 border-t-error rounded-full animate-spin shrink-0" />
                       ) : (
                         <span className="material-symbols-outlined text-[18px]">logout</span>
                       )}
@@ -367,7 +431,7 @@ export function Sidebar({ user }: { user: UserInfo }) {
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1.5 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-primary transition-colors flex-shrink-0 press-scale"
+          className="p-1.5 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-primary transition-colors shrink-0 press-scale"
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <span className="material-symbols-outlined text-xl">
@@ -395,7 +459,7 @@ export function Sidebar({ user }: { user: UserInfo }) {
         <div className={cn("px-2", isCollapsed ? 'hidden' : 'block')}>
            <Link
               href="/practice"
-              className="block w-full py-2.5 px-4 bg-gradient-to-r from-primary to-secondary text-on-primary rounded-full font-bold text-sm hover:opacity-90 transition-opacity shadow-md shadow-primary/20 text-center"
+              className="block w-full py-2.5 px-4 bg-linear-to-r from-primary to-secondary text-on-primary rounded-full font-bold text-sm hover:opacity-90 transition-opacity shadow-md shadow-primary/20 text-center"
             >
               Start Daily Review
             </Link>
@@ -409,6 +473,7 @@ export function Sidebar({ user }: { user: UserInfo }) {
               <Link
                 key={item.href}
                 href={item.href}
+                suppressHydrationWarning={true}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={isCollapsed ? item.label : undefined}
                 className={cn(
@@ -418,14 +483,24 @@ export function Sidebar({ user }: { user: UserInfo }) {
                     : "text-on-surface-variant hover:text-primary hover:bg-surface-container-low"
                 )}
               >
-                {isActive && (
+                {mounted && isActive && (
                   <motion.div
                     layoutId="sidebar-active"
+                    suppressHydrationWarning={true}
                     className="absolute inset-0 bg-primary-fixed rounded-xl"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
-                <span className="material-symbols-outlined text-[20px] relative z-10 flex-shrink-0">{item.icon}</span>
+                {/* Vertical active indicator bar */}
+                {mounted && isActive && (
+                  <motion.div
+                    layoutId="sidebar-active-bar"
+                    suppressHydrationWarning={true}
+                    className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-full"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className="material-symbols-outlined text-[20px] relative z-10 shrink-0">{item.icon}</span>
                 {!isCollapsed && (
                   <span className="relative z-10 whitespace-nowrap">
                     {item.label}

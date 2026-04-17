@@ -46,7 +46,11 @@ export const gamificationRouter = router({
     };
   }),
 
-  /** Award XP and check for level ups + streak. Called after each review. */
+  /**
+   * Award XP and check for level ups + streak. Called after each review.
+   * Wrapped in a transaction so concurrent calls serialize and don't lose
+   * deltas on read-modify-write.
+   */
   awardXP: protectedProcedure
     .input(z.object({
       xpAmount: z.number().min(0),
@@ -56,110 +60,117 @@ export const gamificationRouter = router({
       const userId = ctx.session.user.id;
       const today = todayStr();
 
-      // Upsert XP record
-      const existing = await db.select().from(userXP).where(eq(userXP.userId, userId)).limit(1);
+      const result = await db.transaction(async (tx) => {
+        const existing = await tx.select().from(userXP).where(eq(userXP.userId, userId)).limit(1);
 
-      if (existing.length === 0) {
-        const level = levelFromXP(input.xpAmount);
-        await db.insert(userXP).values({
-          userId,
-          totalXP: input.xpAmount,
-          level,
-          currentStreak: 1,
-          longestStreak: 1,
-          lastStudyDate: today,
-          streakFreezes: 3,
-          graceUsed: false,
-          dailyGoal: 20,
-        });
-        return { totalXP: input.xpAmount, level, levelUp: level > 1, newAchievements: [], streakEvent: null };
-      }
+        if (existing.length === 0) {
+          const level = levelFromXP(input.xpAmount);
+          await tx.insert(userXP).values({
+            userId,
+            totalXP: input.xpAmount,
+            level,
+            currentStreak: 1,
+            longestStreak: 1,
+            lastStudyDate: today,
+            streakFreezes: 3,
+            graceUsed: false,
+            dailyGoal: 20,
+          });
+          return {
+            totalXP: input.xpAmount,
+            level,
+            levelUp: level > 1,
+            newStreak: 1,
+            streakEvent: null as 'continued' | 'grace' | 'freeze_used' | 'broken' | null,
+          };
+        }
 
-      const prev = existing[0];
-      const newTotal = prev.totalXP + input.xpAmount;
-      const newLevel = levelFromXP(newTotal);
-      const levelUp = newLevel > prev.level;
+        const prev = existing[0];
+        const newTotal = prev.totalXP + input.xpAmount;
+        const newLevel = levelFromXP(newTotal);
+        const levelUp = newLevel > prev.level;
 
-      // ── Streak logic with grace period & freezes ──────────────────────────
-      let newStreak = prev.currentStreak;
-      let newLongest = prev.longestStreak;
-      let newGraceUsed = prev.graceUsed;
-      let newFreezes = prev.streakFreezes;
-      let streakEvent: 'continued' | 'grace' | 'freeze_used' | 'broken' | null = null;
+        // ── Streak logic with grace period & freezes ──────────────────────
+        let newStreak = prev.currentStreak;
+        let newLongest = prev.longestStreak;
+        let newGraceUsed = prev.graceUsed;
+        let newFreezes = prev.streakFreezes;
+        let streakEvent: 'continued' | 'grace' | 'freeze_used' | 'broken' | null = null;
 
-      if (prev.lastStudyDate !== today) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
+        if (prev.lastStudyDate !== today) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
-        if (prev.lastStudyDate === yesterdayStr) {
-          // Studied yesterday — normal continuation
-          newStreak = prev.currentStreak + 1;
-          newGraceUsed = false;
-          streakEvent = 'continued';
-        } else {
-          // Missed at least one day
-          if (!prev.graceUsed) {
-            // First miss: apply grace period (preserve streak, flag used)
-            newStreak = prev.currentStreak; // unchanged
+          if (prev.lastStudyDate === yesterdayStr) {
+            newStreak = prev.currentStreak + 1;
+            newGraceUsed = false;
+            streakEvent = 'continued';
+          } else if (!prev.graceUsed) {
+            newStreak = prev.currentStreak;
             newGraceUsed = true;
             streakEvent = 'grace';
-            await db.insert(notifications).values({
+            await tx.insert(notifications).values({
               userId,
               title: '⚠️ Streak Grace Period Used',
               message: `You missed a day but your ${prev.currentStreak}-day streak is safe — this is your one grace pass. Don't miss tomorrow!`,
               type: 'streak',
             });
           } else if (prev.streakFreezes > 0) {
-            // Grace already used — auto-spend a freeze
-            newStreak = prev.currentStreak; // unchanged
+            newStreak = prev.currentStreak;
             newFreezes = prev.streakFreezes - 1;
             newGraceUsed = false;
             streakEvent = 'freeze_used';
-            await db.insert(notifications).values({
+            await tx.insert(notifications).values({
               userId,
               title: '🧊 Streak Freeze Used',
               message: `A streak freeze was used to protect your ${prev.currentStreak}-day streak. ${newFreezes} freeze${newFreezes !== 1 ? 's' : ''} remaining.`,
               type: 'streak',
             });
           } else {
-            // No grace, no freezes — streak broken
             newStreak = 1;
             newGraceUsed = false;
             streakEvent = 'broken';
           }
+          newLongest = Math.max(newLongest, newStreak);
         }
-        newLongest = Math.max(newLongest, newStreak);
-      }
 
-      // Award a freeze at every 7-day streak milestone
-      const prevMilestone = Math.floor(prev.currentStreak / 7);
-      const newMilestone  = Math.floor(newStreak / 7);
-      if (newStreak > 0 && newMilestone > prevMilestone) {
-        newFreezes = Math.min(newFreezes + 1, 10); // cap at 10
-        await db.insert(notifications).values({
-          userId,
-          title: '🧊 Streak Freeze Earned!',
-          message: `${newStreak}-day streak milestone! You earned a streak freeze. You now have ${newFreezes}.`,
-          type: 'streak',
-        });
-      }
+        const prevMilestone = Math.floor(prev.currentStreak / 7);
+        const newMilestone = Math.floor(newStreak / 7);
+        if (newStreak > 0 && newMilestone > prevMilestone) {
+          newFreezes = Math.min(newFreezes + 1, 10);
+          await tx.insert(notifications).values({
+            userId,
+            title: '🧊 Streak Freeze Earned!',
+            message: `${newStreak}-day streak milestone! You earned a streak freeze. You now have ${newFreezes}.`,
+            type: 'streak',
+          });
+        }
 
-      await db.update(userXP).set({
-        totalXP: newTotal,
-        level: newLevel,
-        currentStreak: newStreak,
-        longestStreak: newLongest,
-        lastStudyDate: today,
-        graceUsed: newGraceUsed,
-        streakFreezes: newFreezes,
-        updatedAt: new Date(),
-      }).where(eq(userXP.userId, userId));
+        await tx.update(userXP).set({
+          totalXP: newTotal,
+          level: newLevel,
+          currentStreak: newStreak,
+          longestStreak: newLongest,
+          lastStudyDate: today,
+          graceUsed: newGraceUsed,
+          streakFreezes: newFreezes,
+          updatedAt: new Date(),
+        }).where(eq(userXP.userId, userId));
 
-      // Check for new achievements
-      const newAchievements = await checkAchievements(userId, newTotal, newStreak);
+        return { totalXP: newTotal, level: newLevel, levelUp, newStreak, streakEvent };
+      });
 
-      return { totalXP: newTotal, level: newLevel, levelUp, newAchievements, streakEvent };
+      // Achievement checks read-only against committed state — outside tx
+      const newAchievements = await checkAchievements(userId, result.totalXP, result.newStreak);
+
+      return {
+        totalXP: result.totalXP,
+        level: result.level,
+        levelUp: result.levelUp,
+        newAchievements,
+        streakEvent: result.streakEvent,
+      };
     }),
 
   /** Manually spend a streak freeze (user-initiated). */

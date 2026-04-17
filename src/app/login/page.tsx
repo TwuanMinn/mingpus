@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { useReducedMotion, OverlayContent, SignInPanel, SignUpPanel } from './components';
 
 // ---------------------------------------------------------------------------
@@ -9,7 +8,6 @@ import { useReducedMotion, OverlayContent, SignInPanel, SignUpPanel } from './co
 // ---------------------------------------------------------------------------
 
 export default function LoginPage() {
-  usePageTitle('Login');
   const reducedMotion = useReducedMotion();
 
   const [isSignIn, setIsSignIn] = useState(true);

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
-import { usePageTitle } from '@/hooks/usePageTitle';
+import { QUALITY } from '@/lib/practice-config';
 import Link from 'next/link';
 
 /**
@@ -12,7 +12,6 @@ import Link from 'next/link';
  * Tests productive recall (harder than recognition).
  */
 export default function ReversePracticePage() {
-  usePageTitle('Reverse Practice');
   const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
   const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
   const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
@@ -56,7 +55,13 @@ export default function ReversePracticePage() {
 
     const isCorrect = char === card.character;
     const responseTimeMs = Date.now() - startTime;
-    const quality = isCorrect ? (responseTimeMs < 3000 ? 5 : responseTimeMs < 6000 ? 4 : 3) : 1;
+    const quality = isCorrect
+      ? responseTimeMs < 3000
+        ? QUALITY.EASY
+        : responseTimeMs < 6000
+          ? QUALITY.GOOD
+          : QUALITY.HARD
+      : QUALITY.AGAIN;
 
     submitReview.mutate({ progressId: card.progressId, quality, responseTimeMs });
     recordActivity.mutate({ cardsReviewed: 1, cardsCorrect: isCorrect ? 1 : 0 });
@@ -64,10 +69,10 @@ export default function ReversePracticePage() {
     if (isCorrect) {
       setScore(s => s + 1);
       setStreak(s => s + 1);
-      const xp = quality >= 5 ? 18 : quality >= 4 ? 14 : 10; // Bonus for reverse mode
+      const xp = quality >= QUALITY.EASY ? 18 : quality >= QUALITY.GOOD ? 14 : 10; // Bonus for reverse mode
       awardXP.mutate({ xpAmount: xp, source: 'review' });
       updateChallenge.mutate({ challengeType: 'review_count', increment: 1 });
-      if (quality >= 5) updateChallenge.mutate({ challengeType: 'perfect_recall', increment: 1 });
+      if (quality >= QUALITY.EASY) updateChallenge.mutate({ challengeType: 'perfect_recall', increment: 1 });
     } else {
       setStreak(0);
     }
@@ -105,7 +110,7 @@ export default function ReversePracticePage() {
       <div className="flex-1 flex items-center justify-center px-4 pb-24 md:pb-8">
         <div className="text-center space-y-6 max-w-sm">
           <span className="material-symbols-outlined text-6xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>celebration</span>
-          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-jakarta)] font-bold text-on-surface">
+          <h1 className="text-2xl sm:text-3xl font-(family-name:--font-jakarta) font-bold text-on-surface">
             {total === 0 ? 'No Cards Due!' : 'Session Complete!'}
           </h1>
           {total > 0 && (
@@ -130,7 +135,7 @@ export default function ReversePracticePage() {
             </Link>
             <button
               onClick={() => { setCurrentIndex(0); setScore(0); setStreak(0); refetch(); }}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 hover:opacity-90 transition-all"
+              className="flex-1 px-6 py-3 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 hover:opacity-90 transition-all"
             >
               Try Again
             </button>
@@ -154,7 +159,7 @@ export default function ReversePracticePage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <span className="text-[0.625rem] font-bold uppercase tracking-[0.15em] text-secondary">Reverse Mode</span>
-          <h1 className="text-xl sm:text-2xl font-[family-name:var(--font-jakarta)] font-bold text-on-surface">Meaning → Character</h1>
+          <h1 className="text-xl sm:text-2xl font-(family-name:--font-jakarta) font-bold text-on-surface">Meaning → Character</h1>
         </div>
         <div className="flex items-center gap-4 text-sm">
           {streak > 0 && <span className="font-bold text-secondary">{streak}🔥</span>}
@@ -164,7 +169,7 @@ export default function ReversePracticePage() {
 
       {/* Progress */}
       <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden mb-10">
-        <div className="h-full bg-gradient-to-r from-secondary to-primary rounded-full transition-all duration-500" style={{ width: `${((currentIndex) / total) * 100}%` }} />
+        <div className="h-full bg-linear-to-r from-secondary to-primary rounded-full transition-all duration-500" style={{ width: `${((currentIndex) / total) * 100}%` }} />
       </div>
 
       {/* The Prompt: Show meaning + pinyin */}
@@ -172,7 +177,7 @@ export default function ReversePracticePage() {
         <div className="absolute top-4 right-5 bg-surface-container-low px-3 py-1 rounded-full">
           <span className="text-[0.5rem] font-bold text-secondary uppercase tracking-widest">Find the Character</span>
         </div>
-        <p className="text-2xl sm:text-4xl font-[family-name:var(--font-jakarta)] font-black text-on-surface mt-6 mb-3">
+        <p className="text-2xl sm:text-4xl font-(family-name:--font-jakarta) font-black text-on-surface mt-6 mb-3">
           {card.meaning}
         </p>
         <p className="text-lg text-primary font-medium">{card.pinyin}</p>
@@ -215,7 +220,7 @@ export default function ReversePracticePage() {
       {answered && (
         <button
           onClick={handleNext}
-          className="mt-6 w-full py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          className="mt-6 w-full py-4 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
         >
           Next <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
         </button>

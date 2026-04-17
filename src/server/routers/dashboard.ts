@@ -1,10 +1,184 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/db';
-import { decks, flashcards, userProgress, studySessions } from '@/db/schema';
-import { eq, count, and, lte, gt, sql, desc, sum } from 'drizzle-orm';
+import { decks, flashcards, userProgress, studySessions, userXP } from '@/db/schema';
+import { eq, count, and, lte, gt, sql, desc, sum, asc } from 'drizzle-orm';
+import { levelFromXP, levelProgress, xpForLevel, getLevelInfo } from '@/lib/gamification';
 
 export const dashboardRouter = router({
+  /**
+   * Single combined overview query — replaces 5 separate client-side queries
+   * (stats, streak, recent decks, due cards, XP status). All DB work runs in
+   * parallel; one JSON envelope instead of five.
+   */
+  getOverview: protectedProcedure
+    .input(z.object({ dueCardsLimit: z.number().min(1).max(50).default(3) }).optional())
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const limit = input?.dueCardsLimit ?? 3;
+      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+
+      const [
+        deckResult,
+        cardResult,
+        dueResult,
+        learnedResult,
+        accuracyResult,
+        todaySession,
+        recentDecks,
+        recentSessions,
+        dueCards,
+        xpRows,
+      ] = await Promise.all([
+        db.select({ count: count() }).from(decks).where(eq(decks.userId, userId)),
+        db
+          .select({ count: count() })
+          .from(flashcards)
+          .innerJoin(decks, eq(flashcards.deckId, decks.id))
+          .where(eq(decks.userId, userId)),
+        db
+          .select({ count: count() })
+          .from(userProgress)
+          .where(and(eq(userProgress.userId, userId), lte(userProgress.dueDate, now))),
+        db
+          .select({ count: count() })
+          .from(userProgress)
+          .where(and(eq(userProgress.userId, userId), gt(userProgress.repetition, 0))),
+        db
+          .select({
+            totalReviewed: sum(studySessions.cardsReviewed),
+            totalCorrect: sum(studySessions.cardsCorrect),
+          })
+          .from(studySessions)
+          .where(eq(studySessions.userId, userId)),
+        db
+          .select({ cardsReviewed: studySessions.cardsReviewed })
+          .from(studySessions)
+          .where(and(eq(studySessions.userId, userId), eq(studySessions.date, today))),
+        db
+          .select({
+            id: decks.id,
+            title: decks.title,
+            description: decks.description,
+            createdAt: decks.createdAt,
+            cardCount: sql<number>`COUNT(DISTINCT ${flashcards.id})`,
+            masteredCount: sql<number>`COUNT(DISTINCT CASE WHEN ${userProgress.repetition} > 2 THEN ${userProgress.flashcardId} END)`,
+          })
+          .from(decks)
+          .leftJoin(flashcards, eq(flashcards.deckId, decks.id))
+          .leftJoin(
+            userProgress,
+            and(eq(userProgress.flashcardId, flashcards.id), eq(userProgress.userId, userId))
+          )
+          .where(eq(decks.userId, userId))
+          .groupBy(decks.id)
+          .orderBy(desc(decks.createdAt))
+          .limit(3),
+        db
+          .select({ date: studySessions.date, cardsReviewed: studySessions.cardsReviewed })
+          .from(studySessions)
+          .where(eq(studySessions.userId, userId))
+          .orderBy(desc(studySessions.date))
+          .limit(60),
+        db
+          .select({
+            progressId: userProgress.id,
+            flashcardId: userProgress.flashcardId,
+            interval: userProgress.interval,
+            repetition: userProgress.repetition,
+            efactor: userProgress.efactor,
+            fsrsStability: userProgress.fsrsStability,
+            fsrsDifficulty: userProgress.fsrsDifficulty,
+            character: flashcards.character,
+            pinyin: flashcards.pinyin,
+            meaning: flashcards.meaning,
+            strokes: flashcards.strokes,
+            hskLevel: flashcards.hskLevel,
+          })
+          .from(userProgress)
+          .innerJoin(flashcards, eq(userProgress.flashcardId, flashcards.id))
+          .where(and(eq(userProgress.userId, userId), lte(userProgress.dueDate, now)))
+          .orderBy(asc(userProgress.dueDate))
+          .limit(limit),
+        db.select().from(userXP).where(eq(userXP.userId, userId)).limit(1),
+      ]);
+
+      // Stats
+      const totalReviewed = Number(accuracyResult[0]?.totalReviewed ?? 0);
+      const totalCorrect = Number(accuracyResult[0]?.totalCorrect ?? 0);
+      const accuracy = totalReviewed > 0 ? Math.round((totalCorrect / totalReviewed) * 100) : 0;
+
+      const stats = {
+        totalDecks: deckResult[0]?.count ?? 0,
+        totalCards: cardResult[0]?.count ?? 0,
+        dueForReview: dueResult[0]?.count ?? 0,
+        wordsLearned: learnedResult[0]?.count ?? 0,
+        accuracy,
+        todayReviewed: todaySession[0]?.cardsReviewed ?? 0,
+      };
+
+      // Streak
+      const totalReviewedProgress = learnedResult[0]?.count ?? 0;
+      const hasStudiedToday = recentSessions.length > 0 && recentSessions[0].date === today;
+      const dateSet = new Set(recentSessions.map((s) => s.date));
+      let streakDays = 0;
+      const cursor = new Date();
+      if (!hasStudiedToday) cursor.setDate(cursor.getDate() - 1);
+      if (hasStudiedToday || dateSet.has(cursor.toISOString().slice(0, 10))) {
+        for (let i = 0; i < 60; i++) {
+          if (dateSet.has(cursor.toISOString().slice(0, 10))) {
+            streakDays++;
+            cursor.setDate(cursor.getDate() - 1);
+          } else break;
+        }
+      }
+      const streak = { totalReviewed: totalReviewedProgress, hasStudiedToday, streakDays };
+
+      // Recent decks
+      const recent = recentDecks.map((r) => {
+        const cardCount = Number(r.cardCount);
+        const masteredCount = Number(r.masteredCount);
+        return {
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          createdAt: r.createdAt,
+          cardCount,
+          masteryPercent: cardCount > 0 ? Math.round((masteredCount / cardCount) * 100) : 0,
+        };
+      });
+
+      // XP — initialize on miss (kept out of the parallel block to avoid a race)
+      let xp;
+      if (xpRows.length === 0) {
+        await db.insert(userXP).values({ userId, totalXP: 0, level: 1 });
+        xp = {
+          totalXP: 0,
+          level: 1,
+          progress: 0,
+          xpToNextLevel: xpForLevel(1),
+          levelInfo: getLevelInfo(1),
+          currentStreak: 0,
+          longestStreak: 0,
+        };
+      } else {
+        const row = xpRows[0];
+        const level = levelFromXP(row.totalXP);
+        xp = {
+          totalXP: row.totalXP,
+          level,
+          progress: levelProgress(row.totalXP),
+          xpToNextLevel: xpForLevel(level),
+          levelInfo: getLevelInfo(level),
+          currentStreak: row.currentStreak,
+          longestStreak: row.longestStreak,
+        };
+      }
+
+      return { stats, streak, recentDecks: recent, dueCards, xp };
+    }),
+
   getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
@@ -55,54 +229,42 @@ export const dashboardRouter = router({
     };
   }),
 
-  // Recent decks with mastery percentage
+  // Recent decks with mastery percentage — single-query, no N+1
   getRecentDecks: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
-    const userDecks = await db
+    const rows = await db
       .select({
         id: decks.id,
         title: decks.title,
         description: decks.description,
         createdAt: decks.createdAt,
-        cardCount: count(flashcards.id),
+        cardCount: sql<number>`COUNT(DISTINCT ${flashcards.id})`,
+        masteredCount: sql<number>`COUNT(DISTINCT CASE WHEN ${userProgress.repetition} > 2 THEN ${userProgress.flashcardId} END)`,
       })
       .from(decks)
       .leftJoin(flashcards, eq(flashcards.deckId, decks.id))
+      .leftJoin(
+        userProgress,
+        and(eq(userProgress.flashcardId, flashcards.id), eq(userProgress.userId, userId))
+      )
       .where(eq(decks.userId, userId))
       .groupBy(decks.id)
       .orderBy(desc(decks.createdAt))
       .limit(3);
 
-    // For each deck, compute mastery % (cards with repetition >= 3)
-    const enriched = await Promise.all(
-      userDecks.map(async (deck) => {
-        if (deck.cardCount === 0) return { ...deck, masteryPercent: 0 };
-
-        const deckCardIds = await db
-          .select({ id: flashcards.id })
-          .from(flashcards)
-          .where(eq(flashcards.deckId, deck.id));
-
-        if (deckCardIds.length === 0) return { ...deck, masteryPercent: 0 };
-
-        const [masteredResult] = await db
-          .select({ count: count() })
-          .from(userProgress)
-          .where(
-            and(
-              eq(userProgress.userId, userId),
-              gt(userProgress.repetition, 2),
-              sql`${userProgress.flashcardId} IN (SELECT id FROM flashcards WHERE deck_id = ${deck.id})`
-            )
-          );
-
-        const masteryPercent = Math.round(((masteredResult?.count ?? 0) / deck.cardCount) * 100);
-        return { ...deck, masteryPercent };
-      })
-    );
-
-    return enriched;
+    return rows.map((r) => {
+      const cardCount = Number(r.cardCount);
+      const masteredCount = Number(r.masteredCount);
+      return {
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        createdAt: r.createdAt,
+        cardCount,
+        masteryPercent: cardCount > 0 ? Math.round((masteredCount / cardCount) * 100) : 0,
+      };
+    });
   }),
 
   getStudyStreak: protectedProcedure.query(async ({ ctx }) => {
@@ -157,7 +319,7 @@ export const dashboardRouter = router({
     };
   }),
 
-  // Record or update today's study session
+  // Record or update today's study session — atomic UPSERT, race-safe
   recordStudyActivity: protectedProcedure
     .input(z.object({
       cardsReviewed: z.number().min(1),
@@ -167,25 +329,21 @@ export const dashboardRouter = router({
       const userId = ctx.session.user.id;
       const today = new Date().toISOString().slice(0, 10);
 
-      // Check if we already have a session for today
-      const [existing] = await db
-        .select()
-        .from(studySessions)
-        .where(and(eq(studySessions.userId, userId), eq(studySessions.date, today)));
-
-      if (existing) {
-        await db.update(studySessions).set({
-          cardsReviewed: existing.cardsReviewed + input.cardsReviewed,
-          cardsCorrect: existing.cardsCorrect + input.cardsCorrect,
-        }).where(eq(studySessions.id, existing.id));
-      } else {
-        await db.insert(studySessions).values({
+      await db
+        .insert(studySessions)
+        .values({
           userId,
           date: today,
           cardsReviewed: input.cardsReviewed,
           cardsCorrect: input.cardsCorrect,
+        })
+        .onConflictDoUpdate({
+          target: [studySessions.userId, studySessions.date],
+          set: {
+            cardsReviewed: sql`${studySessions.cardsReviewed} + ${input.cardsReviewed}`,
+            cardsCorrect: sql`${studySessions.cardsCorrect} + ${input.cardsCorrect}`,
+          },
         });
-      }
 
       return { success: true };
     }),

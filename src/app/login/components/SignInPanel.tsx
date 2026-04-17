@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signIn } from '@/lib/auth-client';
 import { AnimatedSignInButton, type BtnPhase } from '@/components/ui/AnimatedSignInButton';
-import { Field, StyledInput, Checkbox, ErrorBanner, BackLink, CTAButton } from './AuthPrimitives';
+import { Field, StyledInput, PasswordInput, Checkbox, ErrorBanner, BackLink, CTAButton } from './AuthPrimitives';
 import { SuccessOverlay } from './SuccessOverlay';
 
 type SignInView = 'form' | 'forgot' | 'forgot-sent';
@@ -111,7 +111,7 @@ export function SignInPanel({ firstRef }: { firstRef: React.RefObject<HTMLInputE
                 <StyledInput inputRef={firstRef} id="si-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={btnPhase !== 'idle'} />
               </Field>
               <Field label="Password" id="si-password">
-                <StyledInput id="si-password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} disabled={btnPhase !== 'idle'} />
+                <PasswordInput id="si-password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} disabled={btnPhase !== 'idle'} />
               </Field>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Checkbox id="keep-signed-in" checked={keep} onChange={setKeep}>Keep me signed in</Checkbox>

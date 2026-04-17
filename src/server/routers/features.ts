@@ -79,8 +79,8 @@ export const featuresRouter = router({
       let radicals: { radical: string; meaning: string; position: string }[] = [];
       try {
         radicals = JSON.parse(result[0].radicals);
-      } catch {
-        radicals = [];
+      } catch (err: unknown) {
+        console.warn(`Malformed radicals JSON for character ${input.character}:`, err);
       }
       return { ...result[0], radicals };
     }),

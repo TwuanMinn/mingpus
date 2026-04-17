@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { openDB, type IDBPDatabase } from 'idb';
 
 interface PendingReview {
@@ -30,6 +30,7 @@ export function useOfflineQueue() {
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   );
   const [pendingCount, setPendingCount] = useState(0);
+  const flushingRef = useRef(false);
 
   // Track online/offline status
   useEffect(() => {
@@ -73,24 +74,37 @@ export function useOfflineQueue() {
     }
   }, [refreshCount]);
 
-  /** Flush queued reviews now that we're online. */
+  /** Flush queued reviews now that we're online. Re-entrant flushes are no-ops. */
   const flush = useCallback(async (
     submitFn: (r: Omit<PendingReview, 'id' | 'queuedAt'>) => Promise<unknown>,
   ) => {
+    if (flushingRef.current) return;
+    flushingRef.current = true;
     try {
       const db = await getDB();
-      const all = await db.getAll(STORE_NAME) as PendingReview[];
-      for (const review of all) {
-        try {
-          await submitFn({ progressId: review.progressId, quality: review.quality, responseTimeMs: review.responseTimeMs });
-          await db.delete(STORE_NAME, review.id!);
-        } catch {
-          break; // Stop on first error; will retry later
-        }
-      }
+      const all = (await db.getAll(STORE_NAME)) as PendingReview[];
+      const results = await Promise.allSettled(
+        all.map((review) =>
+          submitFn({
+            progressId: review.progressId,
+            quality: review.quality,
+            responseTimeMs: review.responseTimeMs,
+          }),
+        ),
+      );
+      // Delete only the reviews that submitted successfully. Failed ones stay queued.
+      await Promise.all(
+        results.map((r, i) =>
+          r.status === 'fulfilled' && all[i].id != null
+            ? db.delete(STORE_NAME, all[i].id!)
+            : Promise.resolve(),
+        ),
+      );
       await refreshCount();
     } catch {
-      // Silent fail
+      // Silent fail — IndexedDB unavailable or transient error
+    } finally {
+      flushingRef.current = false;
     }
   }, [refreshCount]);
 

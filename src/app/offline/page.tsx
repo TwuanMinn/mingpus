@@ -9,7 +9,7 @@ export default function OfflinePage() {
       >
         cloud_off
       </span>
-      <h1 className="text-3xl font-[family-name:var(--font-jakarta)] font-bold mb-3">
+      <h1 className="text-3xl font-(family-name:--font-jakarta) font-bold mb-3">
         You&apos;re Offline
       </h1>
       <p className="text-on-surface-variant max-w-md mb-8 leading-relaxed">
@@ -19,7 +19,7 @@ export default function OfflinePage() {
       <div className="flex flex-col gap-3 items-center">
         <button
           onClick={() => window.location.reload()}
-          className="px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all active:scale-95"
+          className="px-8 py-4 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all active:scale-95"
         >
           Try Again
         </button>

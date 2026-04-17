@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Noto_Sans_SC, Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "./Providers";
@@ -19,8 +19,19 @@ const notoSans = Noto_Sans_SC({
   weight: ["400", "700"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#4648d4",
+};
+
 export const metadata: Metadata = {
-  title: "Digital Calligrapher | Dashboard",
+  title: {
+    default: "Digital Calligrapher",
+    template: "%s · Digital Calligrapher",
+  },
   description: "Learn Chinese Characters with Interactive Flashcards, Quizzes, and Stroke Practice",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -49,10 +60,22 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          rel="stylesheet"
+          rel="preload"
+          as="style"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap"
         />
-        <meta name="theme-color" content="#4648d4" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap';document.head.appendChild(l);",
+          }}
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap"
+          />
+        </noscript>
       </head>
       <body className="min-h-screen selection:bg-primary-fixed selection:text-primary" suppressHydrationWarning>
         <Providers>

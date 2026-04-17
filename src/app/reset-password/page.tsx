@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { usePageTitle } from '@/hooks/usePageTitle';
 
 // ---------------------------------------------------------------------------
 // Primitives (scoped — same visual language as login page)
@@ -160,7 +159,8 @@ function ResetForm() {
         setDone(true);
         setTimeout(() => router.push('/login'), 3000);
       }
-    } catch {
+    } catch (err: unknown) {
+      console.error('Reset password request failed:', err);
       setSubmitError('Network error. Please try again.');
       setLoading(false);
     }
@@ -364,8 +364,6 @@ function ResetForm() {
 // ---------------------------------------------------------------------------
 
 function ResetPasswordContent() {
-  usePageTitle('Reset Password');
-
   return (
     <div style={{
       backgroundColor: '#0E0E11', minHeight: '100vh',

@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export type BtnPhase = 'idle' | 'icon' | 'dots' | 'rocket' | 'done';
@@ -193,24 +194,23 @@ export function AnimatedSignInButton({ btnPhase }: AnimatedSignInButtonProps) {
                 transformOrigin: 'right',
               }}
             />
-            {/* Rocket icon */}
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09ZM12 15l-3-3M22 2l-7.5 7.5"
-                stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+            {/* High-fidelity 3D Glassmorphic Rocket Image */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
+            >
+              <Image
+                src="/images/rocket-transparent.png"
+                alt="Rocket"
+                width={48}
+                height={48}
+                style={{
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 4px 12px rgba(139,127,232,0.6))'
+                }}
               />
-              <path
-                d="M9.5 9.5 5.5 5.5C5.5 5.5 6.5 2 10 2l2 3H9.5ZM14.5 14.5l4 4c0 0-1 3.5-4.5 3.5l-2-3h2.5Z"
-                stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
-                fill="rgba(255,255,255,0.15)"
-              />
-              <path
-                d="M22 2c0 0-4.5-.5-9.5 4.5L9.5 9.5l5 5 3-3C22.5 6.5 22 2 22 2Z"
-                stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
-                fill="rgba(255,255,255,0.1)"
-              />
-              <circle cx="15.5" cy="8.5" r="1.5" fill="white" opacity="0.8" />
-            </svg>
+            </motion.div>
           </motion.div>
         )}
 

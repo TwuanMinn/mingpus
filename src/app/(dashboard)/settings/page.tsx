@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAppearanceStore } from '@/store/useAppearanceStore';
 import type { AppTheme, AppFontSize } from '@/store/useAppearanceStore';
 
@@ -12,7 +11,6 @@ type RepetitionIntensity = 'relaxed' | 'balanced' | 'intense';
 type LearningStyle = 'flashcards' | 'reading' | 'listening' | 'writing' | 'mixed';
 type HskLevel = '1' | '2' | '3' | '4' | '5' | '6';
 type ReminderTone = 'bamboo' | 'temple' | 'guzheng' | 'silent';
-type InterfaceLang = 'en' | 'zh' | 'vi' | 'ja' | 'ko' | 'es';
 type Visibility = 'public' | 'friends' | 'private';
 
 interface Settings {
@@ -37,7 +35,6 @@ interface Settings {
   handwritingSensitivity: number;
   repetitionIntensity: RepetitionIntensity;
   topics: string[];
-  interfaceLang: InterfaceLang;
 }
 
 const STORAGE_KEY = 'dc-settings-v3';
@@ -61,7 +58,6 @@ const DEFAULT: Settings = {
   handwritingSensitivity: 60,
   repetitionIntensity: 'balanced',
   topics: ['Daily Life', 'Food'],
-  interfaceLang: 'en',
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -82,11 +78,6 @@ const FONT_SIZES: { value: AppFontSize; label: string }[] = [
 const REMINDER_TONES: { value: ReminderTone; label: string }[] = [
   { value: 'bamboo', label: '🎋 Bamboo Chime' }, { value: 'temple', label: '🔔 Temple Bell' },
   { value: 'guzheng', label: '🎵 Guzheng Pluck' }, { value: 'silent', label: '🔕 Silent' },
-];
-const INTERFACE_LANGS: { value: InterfaceLang; label: string }[] = [
-  { value: 'en', label: '🇺🇸 English' }, { value: 'zh', label: '🇨🇳 中文' },
-  { value: 'vi', label: '🇻🇳 Tiếng Việt' }, { value: 'ja', label: '🇯🇵 日本語' },
-  { value: 'ko', label: '🇰🇷 한국어' }, { value: 'es', label: '🇪🇸 Español' },
 ];
 const LEARNING_STYLES: { value: LearningStyle; label: string; icon: string }[] = [
   { value: 'flashcards', label: 'Flashcards', icon: 'style' },
@@ -296,8 +287,6 @@ function InlineEdit({ label, value, onSave, type = 'text' }: {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  usePageTitle('Settings');
-
   // ── Appearance store (applies instantly, system-wide) ──
   const appearance = useAppearanceStore();
 
@@ -846,13 +835,6 @@ export default function SettingsPage() {
               })}
             </div>
 
-            <SectionLabel>App Interface Language</SectionLabel>
-            <div className="px-4 pb-4">
-              <select value={settings.interfaceLang} onChange={(e) => patch('interfaceLang', e.target.value as InterfaceLang)}
-                className="w-full bg-surface-container-high text-on-surface text-sm font-medium px-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-primary/50 transition-colors appearance-none cursor-pointer">
-                {INTERFACE_LANGS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
-              </select>
-            </div>
           </SectionCard>
 
           {/* ════════════════════════════════════════════

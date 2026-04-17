@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import type HanziWriterType from 'hanzi-writer';
 
 type StrokeMode = 'animate' | 'quiz';
@@ -25,7 +24,6 @@ const PRESET_CHARS = [
 ];
 
 export default function StrokesPage() {
-  usePageTitle('Strokes');
   const writerRef = useRef<HanziWriterType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedChar, setSelectedChar] = useState('永');
@@ -85,7 +83,13 @@ export default function StrokesPage() {
     try {
       // Dynamic import — keeps HanziWriter out of the initial bundle
       const { default: HanziWriter } = await import('hanzi-writer');
-      const writer = HanziWriter.create(containerRef.current!, char, {
+      
+      if (!containerRef.current) return;
+      // Clear container again immediately before creating to prevent duplicate 
+      // SVGs if multiple async setups fired (e.g. via React StrictMode)
+      containerRef.current.innerHTML = '';
+
+      const writer = HanziWriter.create(containerRef.current, char, {
         width: size,
         height: size,
         padding: 20,

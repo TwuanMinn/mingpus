@@ -1,13 +1,28 @@
 'use client';
 
 import { trpc } from '@/trpc/client';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { ForecastChart } from '@/components/ForecastChart';
-import { MasteryMap } from '@/components/MasteryMap';
 import { HSKProgressTracker } from '@/components/HSKProgress';
-import { WeeklyAccuracyChart } from '@/components/WeeklyAccuracyChart';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const chartSkeleton = () => (
+  <div className="h-64 bg-surface-container-low rounded-2xl animate-pulse" />
+);
+
+// Heavy Recharts-based components — load only when the user reaches them
+const ForecastChart = dynamic(
+  () => import('@/components/ForecastChart').then((m) => m.ForecastChart),
+  { ssr: false, loading: chartSkeleton }
+);
+const MasteryMap = dynamic(
+  () => import('@/components/MasteryMap').then((m) => m.MasteryMap),
+  { ssr: false, loading: chartSkeleton }
+);
+const WeeklyAccuracyChart = dynamic(
+  () => import('@/components/WeeklyAccuracyChart').then((m) => m.WeeklyAccuracyChart),
+  { ssr: false, loading: chartSkeleton }
+);
 
 const QUALITY_LABELS: Record<number, { label: string; color: string }> = {
   0: { label: 'Blackout', color: 'text-error' },
@@ -46,14 +61,14 @@ function HeatmapGrid({ data }: { data: { date: string; cardsReviewed: number }[]
   };
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex gap-[3px] min-w-[700px]">
+    <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0">
+      <div className="flex gap-[2px] sm:gap-[3px] min-w-[480px] sm:min-w-[700px]">
         {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-[3px]">
+          <div key={wi} className="flex flex-col gap-[2px] sm:gap-[3px]">
             {week.map((cell) => (
               <div
                 key={cell.date}
-                className={`w-3 h-3 rounded-sm ${getColor(cell.count)} transition-all duration-150 cursor-default group relative`}
+                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-sm ${getColor(cell.count)} transition-all duration-150 cursor-default group relative`}
                 title={`${cell.date}: ${cell.count} reviews`}
               >
                 {/* Hover tooltip */}
@@ -80,7 +95,6 @@ function HeatmapGrid({ data }: { data: { date: string; cardsReviewed: number }[]
 }
 
 export default function AnalyticsPage() {
-  usePageTitle('Analytics');
   const { data: heatmap, isLoading: heatmapLoading } = trpc.analytics.getHeatmapData.useQuery();
   const { data: weakest, isLoading: weakestLoading } = trpc.analytics.getWeakestCharacters.useQuery();
   const { data: sessions, isLoading: sessionsLoading } = trpc.analytics.getSessionHistory.useQuery();

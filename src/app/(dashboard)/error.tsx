@@ -10,7 +10,7 @@ export default function DashboardError({
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
       <span className="material-symbols-outlined text-6xl text-error mb-4">error</span>
-      <h2 className="text-2xl font-bold text-on-surface font-[family-name:var(--font-jakarta)] mb-2">
+      <h2 className="text-2xl font-bold text-on-surface font-(family-name:--font-jakarta) mb-2">
         Something went wrong
       </h2>
       <p className="text-on-surface-variant mb-6 max-w-md">

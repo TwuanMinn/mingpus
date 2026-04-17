@@ -10,11 +10,11 @@ import { CompoundWords } from '@/components/CompoundWords';
 import { CardReveal } from '@/components/Animations';
 import { AchievementToast, XPPopup } from '@/components/AchievementToast';
 import { ConfirmationChip } from '@/components/MicroInteractions';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useConfetti } from '@/hooks/useConfetti';
 import { calculateReviewXP } from '@/lib/gamification';
+import { QUALITY_ACTIONS } from '@/lib/practice-config';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
@@ -25,15 +25,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
-const QUALITY_ACTIONS = [
-  { quality: 1, label: 'Again', icon: 'replay', key: '1', desc: '< 1 min', className: 'bg-error/10 text-error hover:bg-error/20 border border-error/20' },
-  { quality: 3, label: 'Hard', icon: 'trending_flat', key: '2', desc: '~1 day', className: 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest border border-outline-variant/20' },
-  { quality: 4, label: 'Good', icon: 'thumb_up', key: '3', desc: '~3 days', className: 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20' },
-  { quality: 5, label: 'Easy', icon: 'check_circle', key: '4', desc: '~7 days', className: 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/20 hover:opacity-90' },
-] as const;
-
 export default function PracticePage() {
-  usePageTitle('Practice');
   const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
   const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
   const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
@@ -170,7 +162,7 @@ export default function PracticePage() {
       <div className="flex-1 flex flex-col px-4 sm:px-6 py-6 sm:py-8 max-w-5xl mx-auto w-full pb-24 md:pb-8 items-center justify-center">
         <div className="text-center space-y-6">
           <span className="material-symbols-outlined text-6xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>celebration</span>
-          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-jakarta)] font-bold text-on-surface">
+          <h1 className="text-2xl sm:text-3xl font-(family-name:--font-jakarta) font-bold text-on-surface">
             {total === 0 ? 'No Cards Due!' : 'Session Complete!'}
           </h1>
           {total > 0 && (
@@ -198,7 +190,7 @@ export default function PracticePage() {
           </p>
           <button
             onClick={() => { setCurrentIndex(0); resetSession(); refetch(); }}
-            className="px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all"
+            className="px-8 py-4 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all"
             aria-label={total === 0 ? 'Refresh cards' : 'Start a new practice session'}
           >
             {total === 0 ? 'Refresh' : 'Start New Session'}
@@ -223,7 +215,7 @@ export default function PracticePage() {
         <div className="flex justify-between items-end mb-3 sm:mb-4">
           <div>
             <span className="text-[0.625rem] sm:text-[0.6875rem] font-bold uppercase tracking-[0.15em] text-primary">Current Session</span>
-            <h1 className="text-xl sm:text-2xl font-[family-name:var(--font-jakarta)] font-bold text-on-surface">Daily Review Flow</h1>
+            <h1 className="text-xl sm:text-2xl font-(family-name:--font-jakarta) font-bold text-on-surface">Daily Review Flow</h1>
           </div>
           <div className="text-right flex items-center gap-4">
             {streak > 0 && (
@@ -233,7 +225,7 @@ export default function PracticePage() {
           </div>
         </div>
         <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Session progress">
-          <div className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+          <div className="h-full bg-linear-to-r from-primary to-secondary rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
         </div>
       </div>
 
@@ -250,18 +242,18 @@ export default function PracticePage() {
             </div>
 
             <div className="mb-4 sm:mb-6 mt-2 sm:mt-4">
-              <span className="text-[5rem] sm:text-[8rem] md:text-[10rem] font-[family-name:var(--font-noto-sc)] text-on-surface leading-none block">{card.character}</span>
+              <span className="text-[5rem] sm:text-[8rem] md:text-[10rem] font-(family-name:--font-noto-sc) text-on-surface leading-none block">{card.character}</span>
               <SpeakButton text={card.character} size="lg" className="mt-2" />
             </div>
 
             {revealed ? (
               <div className="mb-6 sm:mb-12 space-y-2" aria-live="polite">
-                <span className="text-lg sm:text-2xl font-[family-name:var(--font-jakarta)] text-primary-container font-medium tracking-wide">{card.pinyin}</span>
+                <span className="text-lg sm:text-2xl font-(family-name:--font-jakarta) text-primary-container font-medium tracking-wide">{card.pinyin}</span>
                 <p className="text-base sm:text-xl font-bold text-on-surface">{card.meaning}</p>
               </div>
             ) : (
               <div className="mb-6 sm:mb-12">
-                <span className="text-lg sm:text-2xl font-[family-name:var(--font-jakarta)] text-primary-container font-medium tracking-wide">? ? ?</span>
+                <span className="text-lg sm:text-2xl font-(family-name:--font-jakarta) text-primary-container font-medium tracking-wide">? ? ?</span>
               </div>
             )}
 

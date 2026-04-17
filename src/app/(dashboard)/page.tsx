@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { trpc } from "@/trpc/client";
 import { SpeakButton } from "@/components/SpeakButton";
-import { DailyChallenges } from "@/components/DailyChallenges";
-import { usePageTitle } from "@/hooks/usePageTitle";
+
+// Below-fold — defer load so it doesn't block the first paint
+const DailyChallenges = dynamic(
+  () => import('@/components/DailyChallenges').then((m) => m.DailyChallenges),
+  { ssr: false, loading: () => <div className="h-40 bg-surface-container-low rounded-2xl animate-pulse" /> }
+);
 
 const DAILY_GOAL_KEY = 'dc-daily-goal';
 const DEFAULT_GOAL = 20;
@@ -23,12 +28,15 @@ function StatSkeleton() {
 }
 
 export default function Dashboard() {
-  usePageTitle('Dashboard');
-  const { data: stats, isLoading: statsLoading } = trpc.dashboard.getDashboardStats.useQuery();
-  const { data: dueCards, isLoading: cardsLoading } = trpc.practice.getDueCards.useQuery({ limit: 3 });
-  const { data: streak } = trpc.dashboard.getStudyStreak.useQuery();
-  const { data: recentDecks, isLoading: decksLoading } = trpc.dashboard.getRecentDecks.useQuery();
-  const { data: xpStatus } = trpc.gamification.getXPStatus.useQuery();
+  const { data: overview, isLoading } = trpc.dashboard.getOverview.useQuery({ dueCardsLimit: 3 });
+  const stats = overview?.stats;
+  const streak = overview?.streak;
+  const recentDecks = overview?.recentDecks;
+  const dueCards = overview?.dueCards;
+  const xpStatus = overview?.xp;
+  const statsLoading = isLoading;
+  const cardsLoading = isLoading;
+  const decksLoading = isLoading;
 
   const totalCards = stats?.totalCards ?? 0;
   const dueCount = stats?.dueForReview ?? 0;
@@ -41,7 +49,9 @@ export default function Dashboard() {
   // Configurable daily goal
   const [dailyGoal, setDailyGoal] = useState(DEFAULT_GOAL);
   const [showGoalEdit, setShowGoalEdit] = useState(false);
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
     const saved = localStorage.getItem(DAILY_GOAL_KEY);
     if (saved) setDailyGoal(Number(saved));
   }, []);
@@ -60,8 +70,8 @@ export default function Dashboard() {
       <section className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-6 pb-2 sm:pb-4" aria-label="Dashboard overview">
         <div className="space-y-1">
           <span className="text-[0.6875rem] font-bold tracking-[0.15em] text-primary uppercase">Welcome back, Scholar</span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-on-surface font-[family-name:var(--font-jakarta)] leading-tight">Your Daily Focus</h2>
-          {xpStatus && (
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-on-surface font-(family-name:--font-jakarta) leading-tight">Your Daily Focus</h2>
+          {mounted && xpStatus && (
             <div className="flex items-center gap-2 mt-1">
               <span className="material-symbols-outlined text-primary text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>{xpStatus.levelInfo.icon}</span>
               <span className="text-xs font-bold text-on-surface-variant">Level {xpStatus.level} {xpStatus.levelInfo.title}</span>
@@ -93,12 +103,12 @@ export default function Dashboard() {
         {/* Study Progress */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <svg className="absolute -bottom-8 -right-8 w-[14rem] sm:w-[20rem] h-[14rem] sm:h-[20rem] text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="absolute -bottom-8 -right-8 w-56 sm:w-[20rem] h-56 sm:h-80 text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M4.26 10.147a60.436 60.436 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.905 59.905 0 0 1 12 3.493a59.902 59.902 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
           </svg>
           
           <div className="relative z-10 flex justify-between items-center mb-6 sm:mb-8">
-            <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Study Progress</h3>
+            <h3 className="font-(family-name:--font-jakarta) font-bold text-lg sm:text-xl text-on-surface">Study Progress</h3>
             <Link href="/analytics" className="font-bold text-sm text-primary flex items-center hover:underline">
               Analytics <span className="material-symbols-outlined text-[16px] ml-1">north_east</span>
             </Link>
@@ -135,13 +145,13 @@ export default function Dashboard() {
         {/* Recent Word Lists — REAL DATA */}
         <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col relative overflow-hidden group">
           {/* Watermark */}
-          <svg className="absolute -bottom-8 -right-8 w-[14rem] sm:w-[20rem] h-[14rem] sm:h-[20rem] text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="absolute -bottom-8 -right-8 w-56 sm:w-[20rem] h-56 sm:h-80 text-primary opacity-10 pointer-events-none z-0 group-hover:scale-110 group-hover:opacity-15 transition-all duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
 
           <div className="relative z-10 flex justify-between items-center mb-6">
-            <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg sm:text-xl text-on-surface">Recent Word Lists</h3>
-            <Link href="/decks" className="font-bold text-sm text-primary hover:underline">
+            <h3 className="font-(family-name:--font-jakarta) font-bold text-lg sm:text-xl text-on-surface">Recent Word Lists</h3>
+            <Link href="/study" className="font-bold text-sm text-primary hover:underline">
               View All
             </Link>
           </div>
@@ -161,7 +171,7 @@ export default function Dashboard() {
                 const color = DECK_COLORS[i % DECK_COLORS.length];
                 const icon = DECK_ICONS[i % DECK_ICONS.length];
                 return (
-                  <Link key={deck.id} href="/decks"
+                  <Link key={deck.id} href="/study"
                     className="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-lowest/80 transition-colors hover:shadow-md hover:-translate-y-0.5">
                     <div className="flex items-center gap-4">
                       <div className={`w-12 h-12 ${color.bg} ${color.text} rounded-xl flex items-center justify-center`}>
@@ -205,7 +215,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-start">
               <div className="space-y-3 sm:space-y-4 max-w-md">
                 <span className="px-3 py-1 bg-primary-fixed text-primary text-[0.6rem] sm:text-[0.65rem] font-bold rounded-full uppercase tracking-widest">Active Review</span>
-                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-[family-name:var(--font-jakarta)] font-black text-on-surface">Experience the Flow of Memory.</h3>
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-(family-name:--font-jakarta) font-black text-on-surface">Experience the Flow of Memory.</h3>
                 <p className="text-on-surface-variant leading-relaxed text-sm sm:text-base">You have <span className="font-bold text-primary">{dueCount} characters</span> due for spaced repetition today.</p>
               </div>
               <div className="hidden lg:block">
@@ -213,10 +223,10 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <Link href="/practice" className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold text-sm sm:text-base shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-center" aria-label={`Start practice session with ${dueCount} cards due`}>
+              <Link href="/practice" className="px-6 sm:px-8 py-3 sm:py-4 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold text-sm sm:text-base shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-center" aria-label={`Start practice session with ${dueCount} cards due`}>
                 Resume Session
               </Link>
-              <Link href="/decks" className="px-6 sm:px-8 py-3 sm:py-4 bg-surface-container-high text-on-surface rounded-full font-bold text-sm sm:text-base hover:bg-primary-fixed transition-colors text-center">
+              <Link href="/study" className="px-6 sm:px-8 py-3 sm:py-4 bg-surface-container-high text-on-surface rounded-full font-bold text-sm sm:text-base hover:bg-primary-fixed transition-colors text-center">
                 Browse Deck
               </Link>
             </div>
@@ -227,9 +237,13 @@ export default function Dashboard() {
         <div className="sm:col-span-2 lg:col-span-4 glass-effect rounded-xl p-6 sm:p-8 flex flex-col justify-between border border-white/40">
           <div className="space-y-5 sm:space-y-6">
             <div className="flex justify-between items-center">
-              <h4 className="font-[family-name:var(--font-jakarta)] font-extrabold text-on-surface uppercase tracking-tight text-sm sm:text-base">Daily Goal</h4>
-              <button onClick={() => setShowGoalEdit(!showGoalEdit)} className="material-symbols-outlined text-primary hover:text-secondary transition-colors text-[20px]" aria-label="Edit daily goal">
-                {showGoalEdit ? 'close' : 'tune'}
+              <h4 className="font-(family-name:--font-jakarta) font-extrabold text-on-surface uppercase tracking-tight text-sm sm:text-base">Daily Goal</h4>
+              <button
+                onClick={() => setShowGoalEdit(!showGoalEdit)}
+                className="text-primary hover:text-secondary transition-colors min-w-11 min-h-11 -mr-2 flex items-center justify-center rounded-full"
+                aria-label="Edit daily goal"
+              >
+                <span className="material-symbols-outlined text-[20px]">{showGoalEdit ? 'close' : 'tune'}</span>
               </button>
             </div>
             {showGoalEdit && (
@@ -253,7 +267,7 @@ export default function Dashboard() {
                 {statsLoading ? <StatSkeleton /> : <span className="font-bold text-on-surface">{todayReviewed} / {dailyGoal}</span>}
               </div>
               <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden" role="progressbar" aria-label="Daily goal progress" aria-valuenow={goalProgress} aria-valuemax={100}>
-                <div className={`h-full rounded-full transition-all duration-500 ${goalProgress >= 100 ? 'bg-gradient-to-r from-secondary to-primary' : 'bg-gradient-to-r from-primary to-secondary'}`} style={{ width: `${goalProgress}%` }}></div>
+                <div className={`h-full rounded-full transition-all duration-500 ${goalProgress >= 100 ? 'bg-linear-to-r from-secondary to-primary' : 'bg-linear-to-r from-primary to-secondary'}`} style={{ width: `${goalProgress}%` }}></div>
               </div>
               {goalProgress >= 100 && <p className="text-xs font-bold text-primary flex items-center gap-1"><span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span> Goal reached! 🎉</p>}
             </div>
@@ -275,14 +289,14 @@ export default function Dashboard() {
         {/* Words to Review */}
         <div className="sm:col-span-2 lg:col-span-5 bg-surface-container-low rounded-xl p-6 sm:p-8 space-y-6 sm:space-y-8">
           <div className="flex justify-between items-center">
-            <h4 className="font-[family-name:var(--font-jakarta)] font-extrabold text-on-surface uppercase tracking-tight text-sm sm:text-base">Critical Review</h4>
+            <h4 className="font-(family-name:--font-jakarta) font-extrabold text-on-surface uppercase tracking-tight text-sm sm:text-base">Critical Review</h4>
             <Link href="/practice" className="text-primary text-xs font-bold hover:underline" aria-label="View all cards due for review">View All</Link>
           </div>
           <div className="space-y-4 sm:space-y-6">
             {cardsLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-4 sm:gap-6 animate-pulse">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-surface-container-high rounded-xl flex-shrink-0" />
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-surface-container-high rounded-xl shrink-0" />
                   <div className="flex-1 space-y-2">
                     <div className="h-4 w-20 bg-surface-container-high rounded" />
                     <div className="h-3 w-32 bg-surface-container-high rounded" />
@@ -291,7 +305,7 @@ export default function Dashboard() {
               ))
             ) : (dueCards && dueCards.length > 0) ? dueCards.map((word) => (
               <div key={word.flashcardId} className="flex items-center gap-4 sm:gap-6 group cursor-pointer" role="listitem">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-surface-container-lowest rounded-xl flex items-center justify-center transition-colors group-hover:bg-primary-fixed flex-shrink-0">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-surface-container-lowest rounded-xl flex items-center justify-center transition-colors group-hover:bg-primary-fixed shrink-0">
                   <span className="chinese-char text-2xl sm:text-3xl font-bold text-on-surface">{word.character}</span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -324,13 +338,13 @@ export default function Dashboard() {
             { icon: "swap_horiz", title: "Reverse", desc: "Meaning → Character recall.", hoverBg: "hover:bg-secondary-fixed", iconColor: "text-secondary", href: "/practice/reverse" },
             { icon: "headphones", title: "Listening", desc: "Audio → Character match.", hoverBg: "hover:bg-tertiary-fixed", iconColor: "text-tertiary", href: "/practice/listening" },
             { icon: "edit_note", title: "Strokes", desc: "Handwriting & radical order.", hoverBg: "hover:bg-secondary-fixed", iconColor: "text-secondary", href: "/strokes" },
-            { icon: "quiz", title: "Quiz", desc: "Multiple choice knowledge test.", hoverBg: "hover:bg-surface-container-high", iconColor: "text-tertiary", href: "/quiz" },
+            { icon: "quiz", title: "Quiz", desc: "Multiple choice knowledge test.", hoverBg: "hover:bg-surface-container-high", iconColor: "text-tertiary", href: "/study" },
             { icon: "explore", title: "Discover", desc: "Explore new characters.", hoverBg: "hover:bg-surface-container-high", iconColor: "text-on-surface-variant", href: "/discover" },
           ].map((card) => (
             <Link key={card.title} href={card.href} className={`bg-surface-container-lowest rounded-xl p-4 sm:p-6 ${card.hoverBg} transition-colors cursor-pointer flex flex-col justify-between gap-3 sm:gap-4`} aria-label={`${card.title}: ${card.desc}`}>
               <span className={`material-symbols-outlined text-2xl sm:text-3xl ${card.iconColor}`}>{card.icon}</span>
               <div>
-                <h4 className="font-[family-name:var(--font-jakarta)] font-bold text-sm sm:text-base text-on-surface mb-1">{card.title}</h4>
+                <h4 className="font-(family-name:--font-jakarta) font-bold text-sm sm:text-base text-on-surface mb-1">{card.title}</h4>
                 <p className="text-xs text-on-surface-variant line-clamp-2">{card.desc}</p>
               </div>
             </Link>
@@ -343,7 +357,7 @@ export default function Dashboard() {
 
       {/* Achievement Banner — Milestone-aware */}
       <section className="relative w-full min-h-[120px] sm:h-48 rounded-xl overflow-hidden flex items-center p-6 sm:p-8 lg:p-12" aria-label="Study achievement">
-        <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary mix-blend-multiply opacity-20"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-secondary to-primary mix-blend-multiply opacity-20"></div>
         <div className="absolute inset-0 bg-cover bg-center -z-10" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDkJ5UfCE7Wn5iAEVA-Wslcp-oFwFfcngs4ETYJo7DYH8rsb6XKaRBaRpS4FnwCUguDKtbL5M0ZmmwonO89aIaLKrKq3Oa3M5aEf3eriqlI8a7zWAE0hk8Ddy2Biao6VQzgrE7jxDI_6FrHjGmqG5I-TewSPOHGD8mUYn-5GrcxqcAn-q5KbfdMVZJE_H_dp4fQRfxgJH-e-u1eYE6nV7CAa-SxhPDPLifbEWX5RPeJ0Jfu9LX-vAGTR3KGSBr8EfWjEp3kk1rhbfE7')" }}></div>
         <div className="relative z-10 w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-on-surface">
           <div className="space-y-1 sm:space-y-2">
@@ -351,7 +365,7 @@ export default function Dashboard() {
               <span className="material-symbols-outlined text-2xl sm:text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {totalReviewed >= 500 ? 'diamond' : totalReviewed >= 100 ? 'workspace_premium' : totalReviewed >= 50 ? 'military_tech' : totalReviewed >= 10 ? 'emoji_events' : hasStudiedToday ? 'local_fire_department' : 'rocket_launch'}
               </span>
-              <h4 className="text-xl sm:text-2xl font-black font-[family-name:var(--font-jakarta)]">
+              <h4 className="text-xl sm:text-2xl font-black font-(family-name:--font-jakarta)">
                 {totalReviewed >= 500 ? 'Diamond Scholar!'
                   : totalReviewed >= 100 ? 'Century Master!'
                   : totalReviewed >= 50 ? 'Half-Century Hero!'

@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen w-full relative">
       <Sidebar user={session.user} />
       <main className="flex-1 relative min-h-screen flex flex-col w-full overflow-x-hidden">
-        <Header user={session.user} />
+        <Header />
         {children}
       </main>
       <MobileNav />

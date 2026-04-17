@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
-import { usePageTitle } from '@/hooks/usePageTitle';
 
 const HISTORY_KEY = 'dc-search-history';
 
@@ -26,7 +26,6 @@ function loadHistory(): HistoryEntry[] {
 }
 
 export default function DictionaryPage() {
-  usePageTitle('Dictionary');
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
   const [query, setQuery] = useState(initialQuery);
@@ -89,7 +88,7 @@ export default function DictionaryPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
               <div>
                 <span className="text-[0.6875rem] font-bold tracking-[0.2em] text-primary uppercase block mb-1">Translation Studio</span>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-on-background font-[family-name:var(--font-jakarta)] tracking-tight">Refine Your Flow</h2>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-on-background font-(family-name:--font-jakarta) tracking-tight">Refine Your Flow</h2>
               </div>
               <div className="flex gap-2 bg-surface-container-low p-1 rounded-full">
                 {[undefined, 1, 2, 3, 4, 5, 6].map(level => (
@@ -107,10 +106,10 @@ export default function DictionaryPage() {
             </div>
 
             {/* Main Translator Card */}
-            <div className="bg-surface-container-lowest rounded-2xl sm:rounded-[1.5rem] shadow-[0_32px_64px_-4px_rgba(27,27,35,0.06)] overflow-hidden">
+            <div className="bg-surface-container-lowest rounded-2xl sm:rounded-3xl shadow-[0_32px_64px_-4px_rgba(27,27,35,0.06)] overflow-hidden">
               {/* Language Toggle Bar */}
               <div className="flex items-center justify-center gap-4 sm:gap-8 py-3 sm:py-4 bg-surface-container-low">
-                <span className="text-sm font-bold text-on-surface font-[family-name:var(--font-jakarta)] min-w-[4.5rem] text-right">{leftLabel}</span>
+                <span className="text-sm font-bold text-on-surface font-(family-name:--font-jakarta) min-w-18 text-right">{leftLabel}</span>
                 <button
                   onClick={handleSwapDirection}
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20 cursor-pointer hover:scale-110 active:scale-95 transition-transform"
@@ -122,7 +121,7 @@ export default function DictionaryPage() {
                     style={{ transform: `rotate(${swapRotation}deg)` }}
                   >swap_horiz</span>
                 </button>
-                <span className="text-sm font-bold text-on-surface font-[family-name:var(--font-jakarta)] min-w-[4.5rem] text-left">{rightLabel}</span>
+                <span className="text-sm font-bold text-on-surface font-(family-name:--font-jakarta) min-w-18 text-left">{rightLabel}</span>
               </div>
 
               {/* Input/Output Grids */}
@@ -217,7 +216,7 @@ export default function DictionaryPage() {
                       setAddingToStudy(null);
                     }
                   }}
-                    className="flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 transition-transform active:scale-95 w-full sm:w-auto justify-center disabled:opacity-50"
+                    className="flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 transition-transform active:scale-95 w-full sm:w-auto justify-center disabled:opacity-50"
                     disabled={!!addingToStudy || !decksData?.length}>
                     <span className="material-symbols-outlined text-sm">{addingToStudy ? 'hourglass_empty' : 'bookmark_add'}</span>
                     {addingToStudy ? 'Adding...' : `Add to ${decksData?.[0]?.title ?? 'Deck'}`}
@@ -232,7 +231,7 @@ export default function DictionaryPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Search Results (2/3 width) */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            <h3 className="text-base sm:text-lg font-bold font-[family-name:var(--font-jakarta)] flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold font-(family-name:--font-jakarta) flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
               {results && results.length > 0 ? `Results (${results.length})` : 'Search Results'}
             </h3>
@@ -271,7 +270,7 @@ export default function DictionaryPage() {
 
           {/* Recent History (1/3 width) */}
           <div className="space-y-4 sm:space-y-6">
-            <h3 className="text-base sm:text-lg font-bold font-[family-name:var(--font-jakarta)] flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold font-(family-name:--font-jakarta) flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span>
               Recent History
             </h3>
@@ -281,7 +280,7 @@ export default function DictionaryPage() {
                   <div key={item.char} onClick={() => setQuery(item.char)}
                     className="p-3 sm:p-4 hover:bg-surface-container-low transition-colors cursor-pointer">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-sm font-bold font-[family-name:var(--font-jakarta)]">{item.meaning}</span>
+                      <span className="text-sm font-bold font-(family-name:--font-jakarta)">{item.meaning}</span>
                       <span className="text-[10px] text-outline">{item.time}</span>
                     </div>
                     <p className="text-sm sm:text-base chinese-char text-primary">{item.char} ({item.pinyin})</p>
@@ -296,12 +295,15 @@ export default function DictionaryPage() {
 
             {/* Decorative Card */}
             <div className="relative h-40 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden group">
-              <img
+              <Image
                 alt="Calligraphy inspiration"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpKJnS9oIytVDK5qm1wzhQJGI35IHDpmQYx2C3yruu7LMo9BaDNxnqPsuUz_5yLQdfgfu5svgPBOkpbMP7eoGEaXPu-Bt3YI1i1iEM9Yk5e7XxD1tdbBtr0MX8ZxQu8jnXjt0m6d8_NbAn603rcAodM81uFjTeggFMp8bxV2NBERt5VxEXIfqnCpfVPo4cbe689kmBsZN2d-QBx-3LuJi3eYIjL-inGL_tcSRXUiO88OlNX5LMOxICWclyobcKhrwqxvcdfZbaF6HZ"
+                fill
+                sizes="(max-width: 640px) 100vw, 50vw"
+                loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/80 to-transparent flex flex-col justify-end p-4 sm:p-5">
+              <div className="absolute inset-0 bg-linear-to-t from-indigo-900/80 to-transparent flex flex-col justify-end p-4 sm:p-5">
                 <p className="text-white text-xs font-bold uppercase tracking-widest mb-1">Daily Quote</p>
                 <p className="text-white chinese-char text-lg">宁静致远</p>
                 <p className="text-white/70 text-[10px] italic">Tranquility yields transcendence.</p>

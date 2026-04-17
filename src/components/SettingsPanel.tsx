@@ -84,11 +84,6 @@ export function SettingsPanel({ open, onClose }: Props) {
   const store = useSettingsStore();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Hydrate on first open
-  useEffect(() => {
-    if (open && !store._hydrated) store._hydrate();
-  }, [open, store]);
-
   // Close on outside click
   useEffect(() => {
     if (!open) return;

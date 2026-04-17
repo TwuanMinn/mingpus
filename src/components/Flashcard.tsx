@@ -59,11 +59,11 @@ export function Flashcard({ character, pinyin, meaning, onResult }: FlashcardPro
 
         {/* Back */}
         <div 
-          className="absolute w-full h-full bg-gradient-to-br from-primary to-secondary text-on-primary border border-primary-container/20 rounded-3xl shadow-xl p-8 flex flex-col items-center justify-between"
+          className="absolute w-full h-full bg-linear-to-br from-primary to-secondary text-on-primary border border-primary-container/20 rounded-3xl shadow-xl p-8 flex flex-col items-center justify-between"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           <div className="flex-1 flex flex-col items-center justify-center w-full">
-             <span className="text-4xl font-bold font-[family-name:var(--font-jakarta)] mb-4">{pinyin}</span>
+             <span className="text-4xl font-bold font-(family-name:--font-jakarta) mb-4">{pinyin}</span>
              <span className="text-2xl text-on-primary/80 text-center">{meaning}</span>
           </div>
           

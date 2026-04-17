@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signUp } from '@/lib/auth-client';
-import { Field, StyledInput, StyledSelect, Checkbox, ErrorBanner, CTAButton } from './AuthPrimitives';
+import { Field, StyledInput, PasswordInput, StyledSelect, Checkbox, ErrorBanner, CTAButton } from './AuthPrimitives';
 
 export function SignUpPanel({ firstRef }: { firstRef: React.RefObject<HTMLInputElement | null> }) {
   const router = useRouter();
@@ -65,10 +65,10 @@ export function SignUpPanel({ firstRef }: { firstRef: React.RefObject<HTMLInputE
             </div>
           </div>
           <Field label="Password" id="su-password">
-            <StyledInput id="su-password" type="password" autoComplete="new-password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
+            <PasswordInput id="su-password" autoComplete="new-password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
           </Field>
           <Field label="Confirm Password" id="su-confirm-password">
-            <StyledInput id="su-confirm-password" type="password" autoComplete="new-password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={loading} />
+            <PasswordInput id="su-confirm-password" autoComplete="new-password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={loading} />
           </Field>
           <Checkbox id="agree-terms" checked={agree} onChange={setAgree}>
             I agree to the{' '}

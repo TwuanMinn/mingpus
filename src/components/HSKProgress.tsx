@@ -37,7 +37,7 @@ export function HSKProgressTracker() {
   return (
     <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg text-on-surface">
+        <h3 className="font-(family-name:--font-jakarta) font-bold text-lg text-on-surface">
           HSK Progress
         </h3>
         <div className="flex items-center gap-3 text-xs text-on-surface-variant">
@@ -71,7 +71,7 @@ export function HSKProgressTracker() {
               className="group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-16 flex-shrink-0">
+                <div className="w-16 shrink-0">
                   <span className="text-xs font-bold text-on-surface">{info.label}</span>
                 </div>
 
@@ -82,7 +82,7 @@ export function HSKProgressTracker() {
                       initial={{ width: 0 }}
                       animate={{ width: `${masteryPercent}%` }}
                       transition={{ duration: 0.8, delay: i * 0.08, ease: 'easeOut' }}
-                      className={`absolute inset-y-0 left-0 bg-gradient-to-r ${info.color} rounded-full`}
+                      className={`absolute inset-y-0 left-0 bg-linear-to-r ${info.color} rounded-full`}
                     />
                     {/* Learning fill (transparent overlay) */}
                     {learnedPercent > masteryPercent && (
@@ -96,7 +96,7 @@ export function HSKProgressTracker() {
                   </div>
                 </div>
 
-                <div className="w-20 text-right flex-shrink-0">
+                <div className="w-20 text-right shrink-0">
                   <span className="text-xs font-bold text-on-surface">{mastered}</span>
                   <span className="text-[10px] text-on-surface-variant"> / {target}</span>
                 </div>

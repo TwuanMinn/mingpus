@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { trpc } from '@/trpc/client';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import Link from 'next/link';
 
 /**
@@ -10,7 +9,6 @@ import Link from 'next/link';
  * Tests listening comprehension without visual hints.
  */
 export default function ListeningPracticePage() {
-  usePageTitle('Listening Practice');
   const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
   const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
   const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
@@ -124,7 +122,7 @@ export default function ListeningPracticePage() {
       <div className="flex-1 flex items-center justify-center px-4 pb-24 md:pb-8">
         <div className="text-center space-y-6 max-w-sm">
           <span className="material-symbols-outlined text-6xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
-          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-jakarta)] font-bold text-on-surface">
+          <h1 className="text-2xl sm:text-3xl font-(family-name:--font-jakarta) font-bold text-on-surface">
             {total === 0 ? 'No Cards Due!' : 'Listening Complete!'}
           </h1>
           {total > 0 && (
@@ -145,7 +143,7 @@ export default function ListeningPracticePage() {
             </Link>
             <button
               onClick={() => { setCurrentIndex(0); setScore(0); setStreak(0); refetch(); }}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 hover:opacity-90"
+              className="flex-1 px-6 py-3 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 hover:opacity-90"
             >
               Try Again
             </button>
@@ -169,7 +167,7 @@ export default function ListeningPracticePage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <span className="text-[0.625rem] font-bold uppercase tracking-[0.15em] text-tertiary">Listening Mode</span>
-          <h1 className="text-xl sm:text-2xl font-[family-name:var(--font-jakarta)] font-bold text-on-surface">Audio → Character</h1>
+          <h1 className="text-xl sm:text-2xl font-(family-name:--font-jakarta) font-bold text-on-surface">Audio → Character</h1>
         </div>
         <div className="flex items-center gap-4 text-sm">
           {streak > 0 && <span className="font-bold text-secondary">{streak}🔥</span>}
@@ -179,7 +177,7 @@ export default function ListeningPracticePage() {
 
       {/* Progress */}
       <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden mb-10">
-        <div className="h-full bg-gradient-to-r from-tertiary to-primary rounded-full transition-all duration-500" style={{ width: `${((currentIndex) / total) * 100}%` }} />
+        <div className="h-full bg-linear-to-r from-tertiary to-primary rounded-full transition-all duration-500" style={{ width: `${((currentIndex) / total) * 100}%` }} />
       </div>
 
       {/* Audio Prompt */}
@@ -190,7 +188,7 @@ export default function ListeningPracticePage() {
 
         <button
           onClick={() => speak(card.character)}
-          className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto shadow-2xl shadow-primary/30 hover:scale-105 active:scale-95 transition-transform"
+          className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center mx-auto shadow-2xl shadow-primary/30 hover:scale-105 active:scale-95 transition-transform"
           aria-label="Play pronunciation"
         >
           <span className="material-symbols-outlined text-white text-[3rem] sm:text-[4rem]" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -247,7 +245,7 @@ export default function ListeningPracticePage() {
       {answered && (
         <button
           onClick={handleNext}
-          className="mt-6 w-full py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          className="mt-6 w-full py-4 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
         >
           Next <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
         </button>

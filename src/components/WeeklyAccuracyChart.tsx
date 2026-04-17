@@ -21,7 +21,7 @@ export function WeeklyAccuracyChart() {
   return (
     <div className="bg-surface-container-low rounded-2xl p-6 sm:p-8">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="font-[family-name:var(--font-jakarta)] font-bold text-lg text-on-surface">
+        <h3 className="font-(family-name:--font-jakarta) font-bold text-lg text-on-surface">
           Weekly Accuracy
         </h3>
         <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Last 8 weeks</span>
@@ -59,10 +59,10 @@ export function WeeklyAccuracyChart() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: `${barHeight}%`, opacity: 1 }}
                     transition={{ duration: 0.5, delay: i * 0.06, ease: 'easeOut' }}
-                    className={`w-full rounded-t-lg bg-gradient-to-t ${accColor} relative overflow-hidden group-hover:shadow-lg group-hover:shadow-primary/10 transition-shadow`}
+                    className={`w-full rounded-t-lg bg-linear-to-t ${accColor} relative overflow-hidden group-hover:shadow-lg group-hover:shadow-primary/10 transition-shadow`}
                   >
                     {/* Shine effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </motion.div>
 
                   {/* Week label */}

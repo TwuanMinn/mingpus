@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
 
 const HISTORY_KEY = 'dc-search-history';
+const BOOKMARKS_KEY = 'dc-bookmarks';
+const SEARCH_DEBOUNCE_MS = 300;
+const MAX_INPUT = 500;
 
 interface HistoryEntry {
   char: string;
@@ -15,10 +19,10 @@ interface HistoryEntry {
   time: string;
 }
 
-function loadHistory(): HistoryEntry[] {
+function loadList(key: string): HistoryEntry[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(HISTORY_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -27,56 +31,161 @@ function loadHistory(): HistoryEntry[] {
 
 export default function DictionaryPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const initialQuery = searchParams.get('q') ?? '';
+
   const [query, setQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [hskFilter, setHskFilter] = useState<number | undefined>(undefined);
   const [searchHistory, setSearchHistory] = useState<HistoryEntry[]>([]);
+  const [bookmarks, setBookmarks] = useState<HistoryEntry[]>([]);
   const [addingToStudy, setAddingToStudy] = useState<string | null>(null);
   const [direction, setDirection] = useState<'en-zh' | 'zh-en'>('en-zh');
   const [swapRotation, setSwapRotation] = useState(0);
+  const [selectedDeckId, setSelectedDeckId] = useState<number | undefined>();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isEnToZh = direction === 'en-zh';
   const leftLabel = isEnToZh ? 'English' : 'Mandarin';
   const rightLabel = isEnToZh ? 'Mandarin' : 'English';
 
+  // Debounce query for tRPC + URL sync
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Sync debounced query to URL (no history spam)
+  useEffect(() => {
+    const current = searchParams.get('q') ?? '';
+    if (debouncedQuery === current) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (debouncedQuery) params.set('q', debouncedQuery);
+    else params.delete('q');
+    router.replace(`${pathname}${params.toString() ? `?${params}` : ''}`, { scroll: false });
+  }, [debouncedQuery, pathname, router, searchParams]);
+
+  // Pick up external URL changes (back/forward)
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    setQuery(prev => (prev === q ? prev : q));
+  }, [searchParams]);
+
+  // Hydrate history + bookmarks, and keep in sync across tabs
+  useEffect(() => {
+    setSearchHistory(loadList(HISTORY_KEY));
+    setBookmarks(loadList(BOOKMARKS_KEY));
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === HISTORY_KEY) setSearchHistory(loadList(HISTORY_KEY));
+      if (e.key === BOOKMARKS_KEY) setBookmarks(loadList(BOOKMARKS_KEY));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // Keyboard shortcuts: "/" or Ctrl/Cmd+K to focus, Esc to clear
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping = target && ['INPUT', 'TEXTAREA'].includes(target.tagName);
+      if ((e.key === '/' && !isTyping) || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        textareaRef.current?.focus();
+      } else if (e.key === 'Escape' && target === textareaRef.current) {
+        setQuery('');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const handleSwapDirection = () => {
-    setDirection(prev => prev === 'en-zh' ? 'zh-en' : 'en-zh');
+    setDirection(prev => (prev === 'en-zh' ? 'zh-en' : 'en-zh'));
     setSwapRotation(prev => prev + 180);
     setQuery('');
   };
-
-  // Sync URL query param
-  useEffect(() => {
-    const q = searchParams.get('q');
-    if (q && q !== query) setQuery(q);
-  }, [searchParams]);
-
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    setSearchHistory(loadHistory());
-  }, []);
 
   const { data: decksData } = trpc.deck.getDecks.useQuery();
   const addCard = trpc.flashcard.addCard.useMutation();
   const utils = trpc.useUtils();
 
+  // Default selected deck to first available
+  useEffect(() => {
+    if (!selectedDeckId && decksData?.length) setSelectedDeckId(decksData[0].id);
+  }, [decksData, selectedDeckId]);
+
   const { data: results, isLoading } = trpc.dictionary.searchCharacters.useQuery(
-    { query, hskLevel: hskFilter },
-    { enabled: query.length > 0 }
+    { query: debouncedQuery, hskLevel: hskFilter },
+    { enabled: debouncedQuery.length > 0 }
   );
 
   const selectedResult = results?.[0];
+  const isBookmarked = selectedResult
+    ? bookmarks.some(b => b.char === selectedResult.character)
+    : false;
 
-  const addToHistory = (char: string, pinyin: string, meaning: string) => {
+  const persistList = (key: string, next: HistoryEntry[]) => {
+    try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+  };
+
+  const addToHistory = useCallback((char: string, pinyin: string, meaning: string) => {
     setSearchHistory(prev => {
       const next = [
         { char, pinyin, meaning, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
         ...prev.filter(h => h.char !== char).slice(0, 9),
       ];
-      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch {}
+      persistList(HISTORY_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const toggleBookmark = (char: string, pinyin: string, meaning: string) => {
+    setBookmarks(prev => {
+      const exists = prev.some(b => b.char === char);
+      const next = exists
+        ? prev.filter(b => b.char !== char)
+        : [{ char, pinyin, meaning, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }, ...prev].slice(0, 50);
+      persistList(BOOKMARKS_KEY, next);
       return next;
     });
   };
+
+  const clearHistory = () => {
+    setSearchHistory([]);
+    persistList(HISTORY_KEY, []);
+  };
+
+  const copyCharacter = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); } catch {}
+  };
+
+  const handleAddToDeck = async () => {
+    if (!selectedResult || !selectedDeckId || addingToStudy) return;
+    setAddingToStudy(selectedResult.character);
+    setErrorMsg(null);
+    try {
+      await addCard.mutateAsync({
+        deckId: selectedDeckId,
+        character: selectedResult.character,
+        pinyin: selectedResult.pinyin,
+        meaning: selectedResult.meaning,
+        hskLevel: selectedResult.hskLevel ?? undefined,
+      });
+      addToHistory(selectedResult.character, selectedResult.pinyin, selectedResult.meaning);
+      utils.deck.getDecks.invalidate();
+      utils.dashboard.getDashboardStats.invalidate();
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to add card');
+    } finally {
+      setAddingToStudy(null);
+    }
+  };
+
+  const selectedDeckTitle = decksData?.find(d => d.id === selectedDeckId)?.title ?? 'Deck';
+  const showingLoading = isLoading && debouncedQuery.length > 0;
 
   return (
     <div className="flex-1 pt-6 pb-24 md:pb-20 px-4 sm:px-6">
@@ -90,18 +199,22 @@ export default function DictionaryPage() {
                 <span className="text-[0.6875rem] font-bold tracking-[0.2em] text-primary uppercase block mb-1">Translation Studio</span>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-on-background font-(family-name:--font-jakarta) tracking-tight">Refine Your Flow</h2>
               </div>
-              <div className="flex gap-2 bg-surface-container-low p-1 rounded-full">
-                {[undefined, 1, 2, 3, 4, 5, 6].map(level => (
-                  <button key={level ?? 'all'}
-                    onClick={() => setHskFilter(level)}
-                    className={`px-3 sm:px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${
-                      hskFilter === level
-                        ? 'bg-surface-container-lowest text-primary shadow-sm'
-                        : 'text-on-surface-variant hover:bg-surface-container-high'
-                    }`}>
-                    {level ? `HSK ${level}` : 'All'}
-                  </button>
-                ))}
+              <div className="flex gap-2 bg-surface-container-low p-1 rounded-full" role="group" aria-label="HSK level filter">
+                {[undefined, 1, 2, 3, 4, 5, 6].map(level => {
+                  const active = hskFilter === level;
+                  return (
+                    <button key={level ?? 'all'}
+                      onClick={() => setHskFilter(level)}
+                      aria-pressed={active}
+                      className={`px-3 sm:px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${
+                        active
+                          ? 'bg-surface-container-lowest text-primary shadow-sm'
+                          : 'text-on-surface-variant hover:bg-surface-container-high'
+                      }`}>
+                      {level ? `HSK ${level}` : 'All'}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -128,15 +241,23 @@ export default function DictionaryPage() {
               <div className="grid grid-cols-1 md:grid-cols-2">
                 {/* Input */}
                 <div className="p-5 sm:p-8 border-b md:border-b-0 md:border-r border-outline-variant/15">
+                  <label htmlFor="dict-query" className="sr-only">Search characters or meanings</label>
                   <textarea
+                    id="dict-query"
+                    ref={textareaRef}
                     value={query}
+                    maxLength={MAX_INPUT}
                     onChange={(e) => setQuery(e.target.value)}
                     className="w-full h-36 sm:h-48 bg-transparent border-none focus:ring-0 text-lg sm:text-xl font-medium text-on-background placeholder-outline/50 resize-none outline-none"
-                    placeholder={isEnToZh ? 'Enter English word or phrase' : 'Enter Chinese character or pinyin'}
-                  ></textarea>
+                    placeholder={isEnToZh ? 'Enter English word or phrase (press / to focus)' : 'Enter Chinese character or pinyin (press / to focus)'}
+                  />
                   <div className="flex justify-between items-center mt-3 sm:mt-4">
-                    <span className="text-xs text-outline font-medium">{query.length} / 500</span>
-                    <button onClick={() => setQuery('')} className="text-outline hover:text-primary transition-colors">
+                    <span className="text-xs text-outline font-medium">{query.length} / {MAX_INPUT}</span>
+                    <button
+                      onClick={() => setQuery('')}
+                      aria-label="Clear input"
+                      className="text-outline hover:text-primary transition-colors"
+                    >
                       <span className="material-symbols-outlined">backspace</span>
                     </button>
                   </div>
@@ -145,9 +266,12 @@ export default function DictionaryPage() {
                 {/* Output */}
                 <div className="p-5 sm:p-8 bg-surface-bright/30">
                   <div className="h-36 sm:h-48">
-                    {isLoading ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                    {showingLoading ? (
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-10 w-24 bg-primary/10 rounded" />
+                        <div className="h-5 w-32 bg-secondary/10 rounded" />
+                        <div className="h-4 w-full bg-on-surface-variant/10 rounded" />
+                        <div className="h-4 w-3/4 bg-on-surface-variant/10 rounded" />
                       </div>
                     ) : selectedResult ? (
                       isEnToZh ? (
@@ -169,22 +293,57 @@ export default function DictionaryPage() {
                           <p className="text-on-surface-variant leading-relaxed text-sm sm:text-base tracking-widest">{selectedResult.pinyin}</p>
                         </>
                       )
-                    ) : query.length > 0 ? (
+                    ) : debouncedQuery.length > 0 ? (
                       <p className="text-on-surface-variant text-sm py-4">No results found</p>
                     ) : (
                       <p className="text-outline/50 text-sm py-4">Start typing to search...</p>
                     )}
                   </div>
-                  <div className="flex justify-end gap-3 mt-3 sm:mt-4">
+                  <div className="flex justify-end gap-1 mt-3 sm:mt-4">
                     {selectedResult && (
-                      <button onClick={() => addToHistory(selectedResult.character, selectedResult.pinyin, selectedResult.meaning)}
-                        className="p-2 text-outline hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
-                      </button>
+                      <>
+                        <Link
+                          href={`/strokes?char=${encodeURIComponent(selectedResult.character)}`}
+                          aria-label="View stroke order"
+                          title="Stroke order"
+                          className="p-2 text-outline hover:text-primary transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">draw</span>
+                        </Link>
+                        <button
+                          onClick={() => copyCharacter(selectedResult.character)}
+                          aria-label="Copy character"
+                          title="Copy"
+                          className="p-2 text-outline hover:text-primary transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                        </button>
+                        <button
+                          onClick={() => toggleBookmark(selectedResult.character, selectedResult.pinyin, selectedResult.meaning)}
+                          aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+                          aria-pressed={isBookmarked}
+                          title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+                          className={`p-2 transition-colors ${isBookmarked ? 'text-primary' : 'text-outline hover:text-primary'}`}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {isBookmarked ? 'bookmark' : 'bookmark_add'}
+                          </span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* Error banner */}
+              {errorMsg && (
+                <div className="px-5 sm:px-8 py-3 bg-red-500/10 text-red-400 text-xs font-medium flex items-center justify-between">
+                  <span>{errorMsg}</span>
+                  <button onClick={() => setErrorMsg(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-300">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </div>
+              )}
 
               {/* Action Bar */}
               {selectedResult && (
@@ -194,33 +353,33 @@ export default function DictionaryPage() {
                       <span className="bg-primary/10 text-primary text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">HSK {selectedResult.hskLevel}</span>
                     )}
                     <span className="bg-secondary/10 text-secondary text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">{selectedResult.deckTitle}</span>
-                    {(selectedResult as Record<string, unknown>).source === 'dictionary' && (
+                    {selectedResult.source === 'dictionary' && (
                       <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Built-in</span>
                     )}
                   </div>
-                  <button onClick={async () => {
-                    if (!decksData?.length || addingToStudy) return;
-                    setAddingToStudy(selectedResult.character);
-                    try {
-                      await addCard.mutateAsync({
-                        deckId: decksData[0].id,
-                        character: selectedResult.character,
-                        pinyin: selectedResult.pinyin,
-                        meaning: selectedResult.meaning,
-                        hskLevel: selectedResult.hskLevel ?? undefined,
-                      });
-                      addToHistory(selectedResult.character, selectedResult.pinyin, selectedResult.meaning);
-                      utils.deck.getDecks.invalidate();
-                      utils.dashboard.getDashboardStats.invalidate();
-                    } catch {} finally {
-                      setAddingToStudy(null);
-                    }
-                  }}
-                    className="flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 transition-transform active:scale-95 w-full sm:w-auto justify-center disabled:opacity-50"
-                    disabled={!!addingToStudy || !decksData?.length}>
-                    <span className="material-symbols-outlined text-sm">{addingToStudy ? 'hourglass_empty' : 'bookmark_add'}</span>
-                    {addingToStudy ? 'Adding...' : `Add to ${decksData?.[0]?.title ?? 'Deck'}`}
-                  </button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {decksData && decksData.length > 1 && (
+                      <select
+                        aria-label="Target deck"
+                        value={selectedDeckId ?? ''}
+                        onChange={(e) => setSelectedDeckId(Number(e.target.value))}
+                        className="bg-surface-container-lowest text-on-surface text-xs font-bold rounded-full px-3 py-2 border border-outline-variant/20 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      >
+                        {decksData.map(d => (
+                          <option key={d.id} value={d.id}>{d.title}</option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      onClick={handleAddToDeck}
+                      className="flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-linear-to-r from-primary to-secondary text-white rounded-full font-bold text-sm shadow-xl shadow-primary/20 transition-transform active:scale-95 flex-1 sm:flex-none justify-center disabled:opacity-50"
+                      disabled={!!addingToStudy || !decksData?.length}
+                      title={!decksData?.length ? 'Create a deck first' : undefined}
+                    >
+                      <span className="material-symbols-outlined text-sm">{addingToStudy ? 'hourglass_empty' : 'bookmark_add'}</span>
+                      {addingToStudy ? 'Adding...' : !decksData?.length ? 'No decks yet' : `Add to ${selectedDeckTitle}`}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -236,10 +395,23 @@ export default function DictionaryPage() {
               {results && results.length > 0 ? `Results (${results.length})` : 'Search Results'}
             </h3>
             <div className="space-y-3 sm:space-y-4">
-              {results && results.length > 0 ? results.slice(0, 10).map((r) => (
-                <div key={r.id}
+              {showingLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="p-4 sm:p-6 bg-surface-container-low rounded-xl sm:rounded-2xl border-l-4 border-primary/20 animate-pulse">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded bg-primary/10" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-24 bg-secondary/10 rounded" />
+                        <div className="h-3 w-3/4 bg-on-surface-variant/10 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : results && results.length > 0 ? results.slice(0, 10).map((r) => (
+                <button key={r.id}
+                  type="button"
                   onClick={() => { setQuery(r.character); addToHistory(r.character, r.pinyin, r.meaning); }}
-                  className="p-4 sm:p-6 bg-surface-container-low rounded-xl sm:rounded-2xl border-l-4 border-primary/20 cursor-pointer hover:bg-surface-container-high transition-colors">
+                  className="w-full text-left p-4 sm:p-6 bg-surface-container-low rounded-xl sm:rounded-2xl border-l-4 border-primary/20 cursor-pointer hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30">
                   <div className="flex items-center gap-4">
                     <span className="text-2xl sm:text-3xl chinese-char text-primary font-bold">{r.character}</span>
                     <div className="flex-1 min-w-0">
@@ -250,41 +422,87 @@ export default function DictionaryPage() {
                       {r.hskLevel && (
                         <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">HSK {r.hskLevel}</span>
                       )}
-                      {(r as Record<string, unknown>).source === 'dictionary' && (
+                      {r.source === 'dictionary' && (
                         <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">Dict</span>
                       )}
                     </div>
                   </div>
-                </div>
-              )) : query.length > 0 && !isLoading ? (
+                </button>
+              )) : debouncedQuery.length > 0 ? (
                 <div className="p-6 bg-surface-container-low rounded-xl text-center">
                   <p className="text-sm text-on-surface-variant">No matching characters found.</p>
                 </div>
               ) : (
                 <div className="p-6 bg-surface-container-low rounded-xl text-center">
-                  <p className="text-sm text-on-surface-variant">Type a character, pinyin, or English meaning to search.</p>
+                  <p className="text-sm text-on-surface-variant">Type a character, pinyin, or English meaning to search. Press <kbd className="px-1.5 py-0.5 text-[10px] bg-surface-container-high rounded">/</kbd> anywhere to focus.</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Recent History (1/3 width) */}
+          {/* Right rail: Bookmarks + Recent History + Daily Quote */}
           <div className="space-y-4 sm:space-y-6">
-            <h3 className="text-base sm:text-lg font-bold font-(family-name:--font-jakarta) flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span>
-              Recent History
-            </h3>
+            {bookmarks.length > 0 && (
+              <>
+                <h3 className="text-base sm:text-lg font-bold font-(family-name:--font-jakarta) flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                  Bookmarks ({bookmarks.length})
+                </h3>
+                <div className="bg-surface-container-lowest rounded-xl sm:rounded-2xl overflow-hidden shadow-sm">
+                  <div className="divide-y divide-outline-variant/10 max-h-64 overflow-y-auto">
+                    {bookmarks.map(item => (
+                      <button key={item.char}
+                        type="button"
+                        onClick={() => setQuery(item.char)}
+                        className="w-full text-left p-3 sm:p-4 hover:bg-surface-container-low transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-sm font-bold font-(family-name:--font-jakarta) truncate pr-2">{item.meaning}</span>
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); toggleBookmark(item.char, item.pinyin, item.meaning); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); toggleBookmark(item.char, item.pinyin, item.meaning); } }}
+                            aria-label="Remove bookmark"
+                            className="material-symbols-outlined text-[14px] text-primary hover:text-red-400"
+                          >
+                            bookmark
+                          </span>
+                        </div>
+                        <p className="text-sm sm:text-base chinese-char text-primary">{item.char} ({item.pinyin})</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base sm:text-lg font-bold font-(family-name:--font-jakarta) flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span>
+                Recent History
+              </h3>
+              {searchHistory.length > 0 && (
+                <button
+                  onClick={clearHistory}
+                  className="text-[10px] font-bold uppercase tracking-wider text-outline hover:text-red-400 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             <div className="bg-surface-container-lowest rounded-xl sm:rounded-2xl overflow-hidden shadow-sm">
               <div className="divide-y divide-outline-variant/10">
                 {searchHistory.length > 0 ? searchHistory.map((item) => (
-                  <div key={item.char} onClick={() => setQuery(item.char)}
-                    className="p-3 sm:p-4 hover:bg-surface-container-low transition-colors cursor-pointer">
+                  <button key={item.char}
+                    type="button"
+                    onClick={() => setQuery(item.char)}
+                    className="w-full text-left p-3 sm:p-4 hover:bg-surface-container-low transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-sm font-bold font-(family-name:--font-jakarta)">{item.meaning}</span>
-                      <span className="text-[10px] text-outline">{item.time}</span>
+                      <span className="text-sm font-bold font-(family-name:--font-jakarta) truncate pr-2">{item.meaning}</span>
+                      <span className="text-[10px] text-outline shrink-0">{item.time}</span>
                     </div>
                     <p className="text-sm sm:text-base chinese-char text-primary">{item.char} ({item.pinyin})</p>
-                  </div>
+                  </button>
                 )) : (
                   <div className="p-4 text-center">
                     <p className="text-xs text-on-surface-variant">No search history yet</p>

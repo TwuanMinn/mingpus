@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { trpc } from '@/trpc/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { InteractiveButton, ConfirmDialog, EASING, DURATION } from '@/components/MicroInteractions';
 
 interface DecksPanelProps {
   onStudyDeck: (deckId: number) => void;
@@ -14,10 +15,13 @@ export function DecksPanel({ onStudyDeck, onStartQuiz }: DecksPanelProps) {
   const createDeck = trpc.deck.createDeck.useMutation({
     onSuccess: () => { refetch(); setShowCreate(false); setNewTitle(''); setNewDesc(''); },
   });
-  const deleteDeck = trpc.deck.deleteDeck.useMutation({ onSuccess: () => refetch() });
+  const deleteDeck = trpc.deck.deleteDeck.useMutation({
+    onSuccess: () => { refetch(); setDeleteTarget(null); },
+  });
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null);
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto pb-24 md:pb-8">
@@ -27,15 +31,13 @@ export function DecksPanel({ onStudyDeck, onStartQuiz }: DecksPanelProps) {
           <h2 className="text-2xl sm:text-3xl font-extrabold text-on-surface font-(family-name:--font-jakarta)">Decks</h2>
         </div>
         <div className="flex gap-3">
-          <button onClick={onStartQuiz}
-            className="px-5 py-3 bg-surface-container-high text-on-surface rounded-full font-bold text-sm hover:bg-surface-container-highest transition-colors flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">quiz</span>
+          <InteractiveButton variant="secondary" size="md" icon="quiz" onClick={onStartQuiz}>
             <span className="hidden sm:inline">Quick Quiz</span>
-          </button>
-          <button onClick={() => setShowCreate(true)}
-            className="px-6 py-3 bg-linear-to-r from-primary to-secondary text-on-primary rounded-full font-bold text-sm hover:opacity-90 transition-opacity flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px]">add</span> New Deck
-          </button>
+          </InteractiveButton>
+          <InteractiveButton variant="primary" size="md" icon="add" onClick={() => setShowCreate(true)}
+            className="bg-linear-to-r from-primary to-secondary shadow-primary/20">
+            New Deck
+          </InteractiveButton>
         </div>
       </div>
 
@@ -50,18 +52,36 @@ export function DecksPanel({ onStudyDeck, onStartQuiz }: DecksPanelProps) {
             <input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Description (optional)"
               className="w-full px-4 py-3 bg-surface-container-low rounded-xl text-sm text-on-surface mb-4 outline-none focus:ring-2 focus:ring-primary/20" />
             <div className="flex gap-3">
-              <button onClick={() => createDeck.mutate({ title: newTitle, description: newDesc || undefined })}
-                disabled={!newTitle.trim() || createDeck.isPending}
-                className="px-6 py-2.5 bg-primary text-on-primary rounded-full font-bold text-sm disabled:opacity-50">
-                {createDeck.isPending ? 'Creating...' : 'Create'}
-              </button>
-              <button onClick={() => setShowCreate(false)} className="px-6 py-2.5 bg-surface-container-high text-on-surface rounded-full font-bold text-sm">
+              <InteractiveButton
+                variant="primary"
+                size="md"
+                onClick={() => createDeck.mutate({ title: newTitle, description: newDesc || undefined })}
+                disabled={!newTitle.trim()}
+                loading={createDeck.isPending}
+              >
+                Create
+              </InteractiveButton>
+              <InteractiveButton variant="secondary" size="md" onClick={() => setShowCreate(false)}>
                 Cancel
-              </button>
+              </InteractiveButton>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Deck?"
+        description={`"${deleteTarget?.title}" and all its flashcards will be permanently removed. This action cannot be undone.`}
+        icon="delete_forever"
+        confirmLabel="Delete"
+        cancelLabel="Keep"
+        variant="danger"
+        loading={deleteDeck.isPending}
+        onConfirm={() => { if (deleteTarget) deleteDeck.mutate({ id: deleteTarget.id }); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
 
       {/* Deck Grid */}
       {isLoading ? (
@@ -88,13 +108,38 @@ export function DecksPanel({ onStudyDeck, onStartQuiz }: DecksPanelProps) {
                   <div className="w-12 h-12 bg-primary-fixed rounded-xl flex items-center justify-center">
                     <span className="material-symbols-outlined text-primary text-xl">collections_bookmark</span>
                   </div>
-                  <button onClick={() => { if (confirm('Delete this deck and all its cards?')) deleteDeck.mutate({ id: deck.id }); }}
+                  <button onClick={() => setDeleteTarget({ id: deck.id, title: deck.title })}
                     className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 rounded-lg transition-all" title="Delete deck">
                     <span className="material-symbols-outlined text-error text-lg">delete</span>
                   </button>
                 </div>
                 <h3 className="text-lg font-bold text-on-surface font-(family-name:--font-jakarta) mb-1">{deck.title}</h3>
                 {deck.description && <p className="text-xs text-on-surface-variant mb-3 line-clamp-2">{deck.description}</p>}
+
+                {/* Due / New badges */}
+                {(deck.cardCount > 0) && (
+                  <div className="flex gap-2 mb-3 flex-wrap">
+                    {Number(deck.dueCount) > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/12 text-amber-600 dark:text-amber-400 rounded-full text-[0.6875rem] font-bold">
+                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
+                        {deck.dueCount} due
+                      </span>
+                    )}
+                    {Number(deck.newCount) > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary rounded-full text-[0.6875rem] font-bold">
+                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>fiber_new</span>
+                        {deck.newCount} new
+                      </span>
+                    )}
+                    {Number(deck.dueCount) === 0 && Number(deck.newCount) === 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[0.6875rem] font-bold">
+                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                        All caught up
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-outline-variant/10">
                   <span className="text-xs font-bold text-outline">{deck.cardCount} cards</span>
                   <button onClick={() => onStudyDeck(deck.id)}

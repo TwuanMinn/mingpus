@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import rocketImg from '../../../public/images/rocket-transparent.png';
 
 export type BtnPhase = 'idle' | 'icon' | 'dots' | 'rocket' | 'done';
 
@@ -29,7 +30,7 @@ export function AnimatedSignInButton({ btnPhase }: AnimatedSignInButtonProps) {
       transition={btnPhase === 'done' ? { duration: 0.5, ease: [0.34, 1.56, 0.64, 1] } : { type: 'spring', stiffness: 400, damping: 20 }}
       style={{
         position: 'relative',
-        overflow: 'hidden',
+        overflow: btnPhase === 'rocket' || btnPhase === 'done' ? 'visible' : 'hidden',
         isolation: 'isolate',
         background: 'linear-gradient(90deg, #8B7FE8, #C9B6F0)',
         boxShadow: '0 8px 32px rgba(139,127,232,0.4)',
@@ -171,7 +172,7 @@ export function AnimatedSignInButton({ btnPhase }: AnimatedSignInButtonProps) {
             key="rocket"
             initial={{ x: -220 }}
             animate={{ x: 220, opacity: [0, 1, 1, 0] }}
-            transition={{ duration: 1.0, ease: [0.25, 0.1, 0.25, 1], times: [0, 0.1, 0.85, 1] }}
+            transition={{ duration: 3.0, ease: [0.25, 0.1, 0.25, 1], times: [0, 0.1, 0.85, 1] }}
             style={{
               position: 'absolute',
               left: '50%',
@@ -187,9 +188,9 @@ export function AnimatedSignInButton({ btnPhase }: AnimatedSignInButtonProps) {
             {/* Rocket trail */}
             <motion.div
               animate={{ scaleX: [0.3, 1, 1, 0.5], opacity: [0, 0.5, 0.5, 0] }}
-              transition={{ duration: 1.0, ease: 'easeOut' }}
+              transition={{ duration: 3.0, ease: 'easeOut' }}
               style={{
-                width: '50px', height: '3px', borderRadius: '2px',
+                width: '120px', height: '5px', borderRadius: '3px',
                 background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6))',
                 transformOrigin: 'right',
               }}
@@ -201,13 +202,13 @@ export function AnimatedSignInButton({ btnPhase }: AnimatedSignInButtonProps) {
               transition={{ delay: 0.1, duration: 0.3 }}
             >
               <Image
-                src="/images/rocket-transparent.png"
+                src={rocketImg}
                 alt="Rocket"
-                width={48}
-                height={48}
+                width={192}
+                height={192}
                 style={{
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 4px 12px rgba(139,127,232,0.6))'
+                  filter: 'drop-shadow(0 8px 24px rgba(139,127,232,0.7))'
                 }}
               />
             </motion.div>

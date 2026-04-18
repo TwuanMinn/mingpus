@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
+import { useAwardXP } from '@/hooks/useAwardXP';
 
 interface QuizPanelProps {
   onReviewFlashcards: () => void;
@@ -12,7 +13,7 @@ interface QuizPanelProps {
 export function QuizPanel({ onReviewFlashcards, onBackToDecks }: QuizPanelProps) {
   const { data: questions, isLoading, refetch } = trpc.quiz.getQuizQuestions.useQuery({ count: 10 });
   const submitAnswer = trpc.quiz.submitQuizAnswer.useMutation();
-  const awardXP = trpc.gamification.awardXP.useMutation();
+  const awardXP = useAwardXP();
   const updateChallenge = trpc.gamification.updateChallengeProgress.useMutation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);

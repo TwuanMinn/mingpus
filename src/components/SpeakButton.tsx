@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { speakChinese, isTTSSupported } from '@/lib/tts';
 
 interface SpeakButtonProps {
@@ -9,7 +10,14 @@ interface SpeakButtonProps {
 }
 
 export function SpeakButton({ text, className = '', size = 'md' }: SpeakButtonProps) {
-  if (!isTTSSupported()) return null;
+  // Defer the window-dependent check to avoid hydration mismatch
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    setSupported(isTTSSupported());
+  }, []);
+
+  if (!supported) return null;
 
   const iconSize = size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[28px]' : 'text-[20px]';
   const padding = size === 'sm' ? 'p-1' : size === 'lg' ? 'p-2.5' : 'p-1.5';

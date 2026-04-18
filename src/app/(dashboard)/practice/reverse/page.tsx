@@ -5,6 +5,7 @@ import React from 'react';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
 import { QUALITY } from '@/lib/practice-config';
+import { useAwardXP } from '@/hooks/useAwardXP';
 import Link from 'next/link';
 
 /**
@@ -15,7 +16,7 @@ export default function ReversePracticePage() {
   const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
   const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
   const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
-  const awardXP = trpc.gamification.awardXP.useMutation();
+  const awardXP = useAwardXP();
   const updateChallenge = trpc.gamification.updateChallengeProgress.useMutation();
 
   const [currentIndex, setCurrentIndex] = useState(0);

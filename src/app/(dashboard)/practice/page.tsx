@@ -11,6 +11,7 @@ import { CardReveal } from '@/components/Animations';
 import { AchievementToast, XPPopup } from '@/components/AchievementToast';
 import { ConfirmationChip } from '@/components/MicroInteractions';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
+import { useAwardXP } from '@/hooks/useAwardXP';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useConfetti } from '@/hooks/useConfetti';
 import { calculateReviewXP } from '@/lib/gamification';
@@ -29,7 +30,7 @@ export default function PracticePage() {
   const { data: dueCards, isLoading, refetch } = trpc.practice.getDueCards.useQuery({ limit: 20 });
   const submitReview = trpc.practice.submitReview.useMutation({ onSuccess: () => refetch() });
   const recordActivity = trpc.dashboard.recordStudyActivity.useMutation();
-  const awardXP = trpc.gamification.awardXP.useMutation();
+  const awardXP = useAwardXP();
   const updateChallenge = trpc.gamification.updateChallengeProgress.useMutation();
 
   const { isOnline, pendingCount, enqueue, flush } = useOfflineQueue();

@@ -474,4 +474,23 @@
 @keyframes signin-shimmer {
   0%, 100% { background-position: 200% 0; }
   50%      { background-position: -200% 0; }
+}
+
+/* Custom scrollbar for character palette */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline-variant) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-outline-variant);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-outline);
 }

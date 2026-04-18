@@ -510,13 +510,12 @@ export function Sidebar({ user }: { user: UserInfo }) {
             );
           })}
 
-          {/* Notifications as a Nav Item */}
-          <div className={cn(
-            "relative flex items-center px-1.5 py-1 mt-1 rounded-xl transition-colors duration-200 text-[13px] text-on-surface-variant hover:bg-surface-container-low",
-            isCollapsed ? 'justify-center' : 'gap-2'
-          )} title={isCollapsed ? "Notifications" : undefined}>
-            <NotificationCenter />
-            {!isCollapsed && <span className="font-medium mr-2">Notifications</span>}
+          {/* Notifications as a Nav Item — single click target wraps icon + label */}
+          <div className="mt-1" title={isCollapsed ? 'Notifications' : undefined}>
+            <NotificationCenter
+              placement="sidebar"
+              label={isCollapsed ? undefined : 'Notifications'}
+            />
           </div>
         </nav>
       </div>

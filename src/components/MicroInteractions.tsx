@@ -369,3 +369,107 @@ export function InteractiveButton({
     </button>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §6 — Confirm Dialog (replaces native window.confirm)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  description?: string;
+  icon?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'danger' | 'warning' | 'info';
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}
+
+const dialogVariantStyles = {
+  danger:  { icon: 'text-error',      bg: 'bg-error/10',    button: 'bg-error text-on-error shadow-error/15' },
+  warning: { icon: 'text-amber-500',  bg: 'bg-amber-500/10', button: 'bg-amber-600 text-white shadow-amber-500/15' },
+  info:    { icon: 'text-primary',    bg: 'bg-primary/10',  button: 'bg-primary text-on-primary shadow-primary/15' },
+};
+
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  icon = 'warning',
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  variant = 'danger',
+  onConfirm,
+  onCancel,
+  loading = false,
+}: ConfirmDialogProps) {
+  const reduced = useReducedMotion();
+  const vs = dialogVariantStyles[variant];
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DURATION.quick }}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          onClick={onCancel}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+          {/* Dialog */}
+          <motion.div
+            initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 12 }}
+            animate={reduced ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 4 }}
+            transition={{ duration: DURATION.snappy, ease: EASING.spring }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm bg-surface-container-lowest rounded-3xl p-6 shadow-2xl border border-outline-variant/15"
+          >
+            {/* Icon */}
+            <div className={`w-12 h-12 ${vs.bg} rounded-2xl flex items-center justify-center mb-4`}>
+              <span
+                className={`material-symbols-outlined text-2xl ${vs.icon}`}
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                {icon}
+              </span>
+            </div>
+
+            <h3 className="text-lg font-bold text-on-surface font-(family-name:--font-jakarta) mb-1">
+              {title}
+            </h3>
+            {description && (
+              <p className="text-sm text-on-surface-variant leading-relaxed mb-6">
+                {description}
+              </p>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={onCancel}
+                disabled={loading}
+                className="px-5 py-2.5 bg-surface-container-high text-on-surface rounded-full font-bold text-sm hover:bg-surface-container-highest transition-colors disabled:opacity-50"
+              >
+                {cancelLabel}
+              </button>
+              <button
+                onClick={onConfirm}
+                disabled={loading}
+                className={`px-5 py-2.5 ${vs.button} rounded-full font-bold text-sm shadow-md hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2`}
+              >
+                {loading && <LoadingDots className="mr-0.5" />}
+                {confirmLabel}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

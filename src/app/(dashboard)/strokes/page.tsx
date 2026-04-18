@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { trpc } from '@/trpc/client';
 import { SpeakButton } from '@/components/SpeakButton';
+import { PRESET_CHARS } from '@/lib/preset-characters';
 import type HanziWriterType from 'hanzi-writer';
 
 type StrokeMode = 'animate' | 'quiz';
@@ -11,17 +12,6 @@ type StrokeMode = 'animate' | 'quiz';
 function isChinese(str: string): boolean {
   return /[\u4e00-\u9fff\u3400-\u4dbf\u{20000}-\u{2a6df}\u{2a700}-\u{2ebef}\uf900-\ufaff]/u.test(str);
 }
-
-const PRESET_CHARS = [
-  { char: '永', name: 'Yǒng', meaning: 'Eternity' },
-  { char: '人', name: 'Rén', meaning: 'Person' },
-  { char: '大', name: 'Dà', meaning: 'Big' },
-  { char: '中', name: 'Zhōng', meaning: 'Middle' },
-  { char: '学', name: 'Xué', meaning: 'Study' },
-  { char: '书', name: 'Shū', meaning: 'Book' },
-  { char: '龙', name: 'Lóng', meaning: 'Dragon' },
-  { char: '爱', name: 'Ài', meaning: 'Love' },
-];
 
 export default function StrokesPage() {
   const writerRef = useRef<HanziWriterType | null>(null);
@@ -57,6 +47,8 @@ export default function StrokesPage() {
   };
 
   const initWriter = useCallback(async (char: string, writerMode: StrokeMode) => {
+    setWriterReady(false); // Begin loading phase
+    
     // Clean up previous writer
     if (writerRef.current) {
       try { writerRef.current.hideCharacter(); } catch {}
@@ -70,6 +62,7 @@ export default function StrokesPage() {
 
     // Guard: only allow actual Chinese characters
     if (!isChinese(char)) {
+      setWriterReady(true);
       containerRef.current.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-on-surface-variant">
         <span class="material-symbols-outlined text-5xl text-outline mb-4">translate</span>
         <p class="text-sm font-medium">"${char}" is not a Chinese character</p>
@@ -104,10 +97,13 @@ export default function StrokesPage() {
         radicalColor: '#4b41e1',
         drawingWidth: 6,
         showHintAfterMisses: 2,
+        // @ts-ignore - Handle older hanzi-writer types that omit callbacks
+        onLoadCharDataSuccess: () => setWriterReady(true),
+        // @ts-ignore
+        onLoadCharDataError: () => setWriterReady(true),
       });
 
       writerRef.current = writer;
-      setWriterReady(true);
 
       if (writerMode === 'animate') {
         writer.animateCharacter();
@@ -141,6 +137,7 @@ export default function StrokesPage() {
         });
       }
     } catch {
+      setWriterReady(true);
       // Character not in HanziWriter database
       if (containerRef.current) {
         containerRef.current.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-on-surface-variant">
@@ -176,13 +173,7 @@ export default function StrokesPage() {
   const handleCustomChar = () => {
     const trimmed = customChar.trim();
     if (trimmed) {
-      const firstChar = trimmed[0];
-      if (isChinese(firstChar)) {
-        setSelectedChar(firstChar);
-      } else {
-        // Still set it — initWriter will show an appropriate error message
-        setSelectedChar(firstChar);
-      }
+      setSelectedChar(trimmed[0]);
       setCustomChar('');
     }
   };
@@ -268,22 +259,27 @@ export default function StrokesPage() {
 
           {/* Character Palette from user's cards */}
           <div className="bg-surface-container-low rounded-xl p-5 sm:p-8">
-            <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-outline mb-3 sm:mb-4">Quick Select</h4>
-            <div className="grid grid-cols-4 gap-2">
-              {allChars.slice(0, 16).map((c) => (
-                <button
-                  key={c.char}
-                  onClick={() => setSelectedChar(c.char)}
-                  className={`p-3 rounded-xl flex flex-col items-center justify-center transition-all ${
-                    selectedChar === c.char
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-lowest text-on-surface hover:bg-primary-fixed hover:text-primary'
-                  }`}
-                >
-                  <span className="chinese-char text-lg sm:text-xl">{c.char}</span>
-                  <span className="text-[8px] sm:text-[9px] font-bold mt-0.5 truncate w-full text-center">{c.name}</span>
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-outline">Quick Select</h4>
+              <span className="text-[9px] font-medium text-outline tabular-nums">{allChars.length} chars</span>
+            </div>
+            <div className="max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+              <div className="grid grid-cols-4 gap-2">
+                {allChars.map((c, i) => (
+                  <button
+                    key={`${c.char}-${i}`}
+                    onClick={() => setSelectedChar(c.char)}
+                    className={`p-2.5 sm:p-3 rounded-xl flex flex-col items-center justify-center transition-all ${
+                      selectedChar === c.char
+                        ? 'bg-primary text-on-primary ring-2 ring-primary/30 scale-[1.02]'
+                        : 'bg-surface-container-lowest text-on-surface hover:bg-primary-fixed hover:text-primary'
+                    }`}
+                  >
+                    <span className="chinese-char text-lg sm:text-xl">{c.char}</span>
+                    <span className="text-[8px] sm:text-[9px] font-bold mt-0.5 truncate w-full text-center">{c.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -311,7 +307,15 @@ export default function StrokesPage() {
         <div className="lg:col-span-8 relative group order-1 lg:order-2">
           <div className="bg-surface-container-lowest rounded-2xl sm:rounded-3xl aspect-square w-full max-w-[500px] mx-auto shadow-2xl shadow-on-surface/5 relative overflow-hidden flex items-center justify-center border border-surface-variant/30">
             <div className="absolute inset-0 canvas-grid opacity-30"></div>
-            <div ref={containerRef} className="relative z-10 flex items-center justify-center w-full h-full" />
+            
+            {!writerReady && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-surface-container-lowest/70 backdrop-blur-sm transition-all duration-300">
+                <div className="w-10 h-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin mb-4" />
+                <span className="text-xs font-bold text-primary tracking-widest uppercase animate-pulse">Loading Engine</span>
+              </div>
+            )}
+            
+            <div ref={containerRef} className={`relative z-10 flex items-center justify-center w-full h-full transition-opacity duration-300 ${writerReady ? 'opacity-100' : 'opacity-0'}`} />
           </div>
 
           {/* Action Bar */}

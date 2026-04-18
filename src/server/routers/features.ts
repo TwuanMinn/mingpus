@@ -106,13 +106,25 @@ export const featuresRouter = router({
       ))
       .where(eq(decks.userId, ctx.session.user.id));
 
-    return rows.map(r => ({
+    const mapped = rows.map(r => ({
       ...r,
       mastery: r.repetition === null ? 'new' as const
         : r.repetition >= 5 && (r.efactor ?? 2500) >= 2500 ? 'mastered' as const
         : r.repetition >= 2 ? 'learning' as const
         : 'new' as const,
     }));
+
+    const masteryRank = { mastered: 3, learning: 2, new: 1 } as const;
+    const uniqueMap = new Map<string, typeof mapped[0]>();
+    
+    for (const item of mapped) {
+      const existing = uniqueMap.get(item.character);
+      if (!existing || masteryRank[item.mastery] > masteryRank[existing.mastery]) {
+        uniqueMap.set(item.character, item);
+      }
+    }
+    
+    return Array.from(uniqueMap.values());
   }),
 
   // ─── Spaced Repetition Forecast (single query, no N+1) ───
@@ -155,13 +167,37 @@ export const featuresRouter = router({
   }),
 
   // ─── Notifications ───
-  getNotifications: protectedProcedure.query(async ({ ctx }) => {
-    return await db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.userId, ctx.session.user.id))
-      .orderBy(desc(notifications.createdAt))
-      .limit(20);
+  getNotifications: protectedProcedure
+    .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
+    .query(async ({ ctx, input }) => {
+      return await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, ctx.session.user.id))
+        .orderBy(desc(notifications.createdAt))
+        .limit(input?.limit ?? 20);
+    }),
+
+  deleteNotification: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await db
+        .delete(notifications)
+        .where(and(
+          eq(notifications.id, input.id),
+          eq(notifications.userId, ctx.session.user.id),
+        ));
+      return { success: true };
+    }),
+
+  clearReadNotifications: protectedProcedure.mutation(async ({ ctx }) => {
+    await db
+      .delete(notifications)
+      .where(and(
+        eq(notifications.userId, ctx.session.user.id),
+        eq(notifications.read, true),
+      ));
+    return { success: true };
   }),
 
   getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
@@ -218,6 +254,62 @@ export const featuresRouter = router({
     const s = stats[0];
     const accuracy = s.totalReviewed > 0 ? Math.round((s.totalCorrect / s.totalReviewed) * 100) : 0;
 
+    // Build contextual actions based on performance
+    type ActionPayload = { label: string; href: string; icon: string; variant: 'primary' | 'secondary' };
+    const actions: ActionPayload[] = [];
+
+    if (s.totalReviewed === 0) {
+      // No activity — nudge them back in
+      actions.push({
+        label: 'Start Studying',
+        href: '/study',
+        icon: 'play_arrow',
+        variant: 'primary',
+      });
+    } else if (accuracy < 70) {
+      // Struggling — offer a focused rescue session
+      actions.push({
+        label: 'Start Rescue Session',
+        href: '/study',
+        icon: 'emergency',
+        variant: 'primary',
+      });
+      actions.push({
+        label: 'Practice Strokes',
+        href: '/strokes',
+        icon: 'brush',
+        variant: 'secondary',
+      });
+    } else if (accuracy < 90) {
+      // Decent but room to grow
+      actions.push({
+        label: 'Continue Studying',
+        href: '/study',
+        icon: 'school',
+        variant: 'primary',
+      });
+      actions.push({
+        label: 'View Analytics',
+        href: '/analytics',
+        icon: 'insights',
+        variant: 'secondary',
+      });
+    } else {
+      // Crushing it
+      actions.push({
+        label: 'View Analytics',
+        href: '/analytics',
+        icon: 'insights',
+        variant: 'primary',
+      });
+      actions.push({
+        label: 'Explore New Words',
+        href: '/discover',
+        icon: 'explore',
+        variant: 'secondary',
+      });
+    }
+
     const message = s.totalReviewed > 0
       ? `This week: ${s.totalReviewed} cards reviewed across ${s.sessions} sessions with ${accuracy}% accuracy. ${accuracy >= 80 ? 'Excellent work! 🎉' : 'Keep practicing! 💪'}`
       : 'No study sessions this week. Jump back in — consistency is key! 📚';
@@ -227,7 +319,7 @@ export const featuresRouter = router({
       title: '📊 Weekly Study Summary',
       message,
       type: 'weekly_summary',
-      data: JSON.stringify(s),
+      data: JSON.stringify({ ...s, actions }),
     });
 
     return { success: true, message };

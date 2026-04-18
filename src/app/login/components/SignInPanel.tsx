@@ -55,7 +55,7 @@ export function SignInPanel({ firstRef }: { firstRef: React.RefObject<HTMLInputE
         setBtnPhase('done');
         setTimeout(() => setShowOverlay(true), 400);
         setTimeout(() => { router.push('/'); router.refresh(); }, 2600);
-      }, 1000);
+      }, 3200);
     }
   };
 

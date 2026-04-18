@@ -4,6 +4,56 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useReducedMotion, OverlayContent, SignInPanel, SignUpPanel } from './components';
 
 // ---------------------------------------------------------------------------
+// Floating Chinese Characters — decorative watermark that drifts upward
+// ---------------------------------------------------------------------------
+
+const FLOAT_CHARS = ['学', '写', '道', '墨', '心', '笔', '文', '字', '书', '画', '知', '思', '练', '功', '静'];
+
+function FloatingCharacters() {
+  const items = React.useMemo(() => {
+    return FLOAT_CHARS.map((char, i) => ({
+      char,
+      left: `${3 + (i * 13) % 94}%`,
+      size: 80 + (i % 5) * 30,
+      duration: 22 + (i % 6) * 5,
+      delay: (i % 8) * 2.5,
+      opacity: 0.02 + (i % 4) * 0.008,
+    }));
+  }, []);
+
+  return (
+    <>
+      {items.map((item, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: item.left,
+            bottom: '-8%',
+            fontSize: `${item.size}px`,
+            fontWeight: 900,
+            color: 'rgba(255,255,255,1)',
+            opacity: item.opacity,
+            filter: 'blur(1.5px)',
+            animation: `floatUp ${item.duration}s ${item.delay}s linear infinite`,
+            userSelect: 'none',
+          }}
+        >
+          {item.char}
+        </div>
+      ))}
+      <style>{`
+        @keyframes floatUp {
+          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+          60% { opacity: 1; }
+          100% { transform: translateY(-110vh) rotate(12deg); opacity: 0; }
+        }
+      `}</style>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -62,9 +112,10 @@ export default function LoginPage() {
       padding: '1rem', fontFamily: 'Inter, DM Sans, system-ui, sans-serif',
     }}>
       {/* Ambient glows */}
-      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 700px 500px at 20% 50%, rgba(139,127,232,0.07) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 600px 500px at 80% 50%, rgba(201,182,240,0.05) 0%, transparent 70%)' }} />
+        <FloatingCharacters />
       </div>
 
       <main style={{ position: 'relative', width: '100%', maxWidth: '900px', zIndex: 10 }}>
@@ -85,9 +136,12 @@ export default function LoginPage() {
               opacity: isSignIn ? 1 : 0,
               transition: panelFade(isSignIn),
               pointerEvents: isSignIn ? 'auto' : 'none',
+              overflow: 'hidden',
             }}
           >
-            <SignInPanel firstRef={siFirstRef} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <SignInPanel firstRef={siFirstRef} />
+            </div>
           </div>
 
           {/* ── SIGN UP PANEL ── */}
@@ -100,9 +154,12 @@ export default function LoginPage() {
               opacity: !isSignIn ? 1 : 0,
               transition: panelFade(!isSignIn),
               pointerEvents: !isSignIn ? 'auto' : 'none',
+              overflow: 'hidden',
             }}
           >
-            <SignUpPanel firstRef={suFirstRef} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <SignUpPanel firstRef={suFirstRef} />
+            </div>
           </div>
 
           {/* ── OVERLAY ── */}
